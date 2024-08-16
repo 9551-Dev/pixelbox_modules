@@ -1,4 +1,4 @@
-return {init=function(box,module,api,share,api_init,supress)
+return {init=function(box,module,api,_,_,supress)
     local function check_graphics_mode()
         if term.getGraphicsMode() ~= 1 then
             api.module_error(module,"Terminal graphics mode must be \"1\"",3,supress)
