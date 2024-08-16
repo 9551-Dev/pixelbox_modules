@@ -3,7 +3,7 @@ Hopefully soon to be growing collection of modules and tools to be loading and u
 
 ## Module index
 - [[**`pb_grender`**]](#pixelbox-graphicsrender) - CCPC GFX mode integration
-- [[**`pb_analyzer`**]](#pixelbox-graphicsrender) - CCPC GFX mode integration
+- [[**`pb_analyzer`**]](#pixelbox-graphicsrender) - Buffer debugging tool
 
 ## How to load pixelbox modules?
 Pixelbox provides two ways to load modules, those are
