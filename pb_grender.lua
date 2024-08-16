@@ -16,7 +16,7 @@ return {init=function(box,module,api,_,_,supress)
                 api.module_error(module,"Target terminal doesnt have GFX mode",3,supress)
             end
 
-            local w,h = box.term.getSize(2)
+            local w,h = box.term.getSize(1)
 
             box.term_width,box.term_height = w,h
             box.width,     box.height      = w,h
