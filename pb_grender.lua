@@ -1,13 +1,15 @@
-return {init=function(box,module,api,_,_,supress)
-    local function check_graphics_mode()
-        if term.getGraphicsMode() ~= 1 then
-            api.module_error(module,"Terminal graphics mode must be \"1\"",3,supress)
+return {init=function(box,module,api,share,_,supress)
+    local function check_graphics_mode(terminal)
+        if terminal.getGraphicsMode() ~= 1 then
+            if not share.set_term_mode then
+                api.module_error(module,"Terminal graphics mode must be \"1\"",3,supress)
+            else terminal.setGraphicsMode(1) end
         end
     end
 
     return {
         render=function(self)
-            check_graphics_mode()
+            check_graphics_mode(self.term)
             self.term.drawPixels(1,1,self.canvas)
         end
     },{
