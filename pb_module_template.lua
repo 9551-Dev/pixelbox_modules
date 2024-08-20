@@ -1,4 +1,4 @@
-return {init=function(box,module,api,share,api_init,supress_errors)
+return {init=function(box,module,api,share,api_init,load_flags)
     return {},{}
 end,
     id         = "PB_MODULE:template",

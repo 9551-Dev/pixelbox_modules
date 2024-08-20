@@ -1,6 +1,6 @@
-return {init=function(_,module,api,_,_,supress_errors)
+return {init=function(_,module,api,_,_,flags)
     local function err(str)
-        api.module_error(module,str,3,supress_errors)
+        api.module_error(module,str,3,flags.supress)
     end
 
     local to_blit = {}
