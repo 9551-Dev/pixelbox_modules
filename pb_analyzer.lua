@@ -18,15 +18,15 @@ return {init=function(_,module,api,_,_,flags)
             for y=1,self.height do
                 local row = canvas[y]
                 if not row then
-                    err(("Box is missing a pixel row: %d"):format(y))
+                    err(("Canvas is missing a pixel row: %d"):format(y))
                 end
 
                 for x=1,self.width do
                     local pixel = row[x]
                     if not pixel then
-                        err(("Box is missing a pixel at:\n\nx:%d y:%d"):format(x,y))
+                        err(("Canvas is missing a pixel at:\n\nx:%d y:%d"):format(x,y))
                     elseif not to_blit[pixel] then
-                        err(("Box has an invalid pixel at:\n\nx:%d y:%d. Value: %s"):format(x,y,pixel))
+                        err(("Canvas has an invalid pixel at:\n\nx:%d y:%d. Value: %s"):format(x,y,pixel))
                     end
                 end
             end
