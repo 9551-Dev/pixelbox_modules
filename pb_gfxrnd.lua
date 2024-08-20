@@ -27,8 +27,8 @@ return {init=function(box,module,api,share,_,supress)
         end
     }
 end,
-    id         = "PB_MODULE:grender",
-    name       = "PB_GraphicsRender",
+    id         = "PB_MODULE:gfxrnd",
+    name       = "PB_GFXRender",
     author     = "9551",
     contact    = "https://devvie.cc/contact",
     report_msg = "\n__name: module error, report issues at\n-> __contact"

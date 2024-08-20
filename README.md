@@ -2,8 +2,8 @@
 Hopefully soon to be growing collection of modules and tools to be loading and used with [pixelbox_lite](https://github.com/9551-Dev/pixelbox_lite)
 
 ## Module index
-- [[**`pb_grender`**]](#pixelbox-graphicsrender) - CCPC GFX mode integration
-- [[**`pb_analyzer`**]](#pixelbox-graphicsrender) - Buffer debugging tool
+- [[**`pb_gfxrnd`**]](#pixelbox-gfxrender) - CCPC GFX mode integration
+- [[**`pb_analyzer`**]](#pixelbox-analyzer) - Buffer debugging tool
 
 ## How to load pixelbox modules?
 Pixelbox provides two ways to load modules, those are
@@ -49,7 +49,7 @@ box:load_modules{
 - Modules can tell apart how they are being loaded and act accordingly.
 
 # Modules
-### [[PixelBox GraphicsRender]](./pb_grender.lua)
+### [[PixelBox GraphicsRender]](./pb_gfxrnd.lua)
 Redirects the pixelbox `:draw()` call to CraftOS PCs graphics mode
 
 **Usecase:** Testing how programs run at higher resolutions
@@ -60,8 +60,8 @@ Redirects the pixelbox `:draw()` call to CraftOS PCs graphics mode
 - Supports monitors and any terminals with an existing `drawPixels` function
 
 ```
-- id:   PB_MODULE:grender
-- name: PB_GraphicsRender
+- id:   PB_MODULE:gfxrnd
+- name: PB_GFXRender
 ```
 ### [[PixelBox Analyzer]](./pb_analyzer.lua)
 Adds an analyze_buffer function which sanity checks buffer data
