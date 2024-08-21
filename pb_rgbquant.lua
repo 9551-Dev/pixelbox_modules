@@ -1,18 +1,9 @@
-return {init=function(box,_,_,_,_,_)
-    local function create_multilayer_list(n,tbl)
-        tbl = tbl or {}
-        if n == 0 then return tbl end
-        setmetatable(tbl, {__index = function(t, k)
-            local new = create_multilayer_list(n-1)
-            t[k] = new
-            return new
-        end})
-        return tbl
-    end
-
+return {init=function(box,module,api,_,_,load_flags)
     local function SMALL_TO_LARGE(a,b)
         return a.distance < b.distance
     end
+
+    local arr_util
 
     local TABLE_SORT = table.sort
     local function pythagorean_quantize(palette,r,g,b)
@@ -38,7 +29,7 @@ return {init=function(box,_,_,_,_,_)
     end
 
     local function generate_lookup_space(base,r_res,g_res,b_res)
-        local color_space = create_multilayer_list(2)
+        local color_space = arr_util.create_multilayer_list(2)
 
         for r_position=0,r_res do
             for g_position=0,g_res do
@@ -66,6 +57,25 @@ return {init=function(box,_,_,_,_,_)
         for i=1,#base do distance_vectors[i] = {} end
 
         base.dist = distance_vectors
+    end
+
+    local function func_palette(pal_func)
+        local palette_base = {}
+
+        for i=0,15 do
+            local pal_idx = 2^i
+            local pr,pg,pb = pal_func(pal_idx)
+            palette_base[#palette_base+1] =  {
+                palette_index = pal_idx,
+                color = {
+                    r=pr,g=pg,b=pb
+                }
+            }
+        end
+
+        palette_base_init(palette_base)
+
+        return palette_base
     end
 
     return {
@@ -101,23 +111,10 @@ return {init=function(box,_,_,_,_,_)
             pal={
                 from_term=function(terminal)
                     terminal = terminal or box.term
-
-                    local palette_base = {}
-
-                    for i=0,15 do
-                        local pal_idx = 2^i
-                        local pr,pg,pb = terminal.getPaletteColor(pal_idx)
-                        palette_base[#palette_base+1] =  {
-                            palette_index = pal_idx,
-                            color = {
-                                r=pr,g=pg,b=pb
-                            }
-                        }
-                    end
-
-                    palette_base_init(palette_base)
-
-                    return palette_base
+                    return func_palette(terminal.getPaletteColor)
+                end,
+                from_native=function()
+                    return func_palette(term.nativePaletteColor)
                 end,
                 from_list=function(pal_colors)
                     local palette_base = {}
@@ -136,14 +133,20 @@ return {init=function(box,_,_,_,_,_)
                 end
             },
             internal={
-                create_multilayer_list=create_multilayer_list,
                 SMALL_TO_LARGE        =SMALL_TO_LARGE,
                 pythagorean_quantize  =pythagorean_quantize,
                 generate_lookup_space =generate_lookup_space,
-                palette_base_init     =palette_base_init
+                palette_base_init     =palette_base_init,
+                func_palette          =func_palette
             }
         }
-    },{}
+    },{verified_load=function()
+        if not box.modules["PB_MODULE:arrutil"] then
+            api.module_error(module,"Missing dependency PB_MODULE:arrutil",3,load_flags.supress)
+        end
+
+        arr_util = box.modules["PB_MODULE:arrutil"].__fn.arrutil
+    end}
 end,
     id         = "PB_MODULE:rgbquant",
     name       = "PB_RGBQuantizer",
