@@ -1,102 +1,140 @@
-return {init=function(box,module,api,share,api_init,load_flags)
+return {init=function(_,_,_,_,_,_)
     local arr_util
 
-    local function get_most_channel(max,min)
-        local diffs = {}
-        for i=1,3 do
-            diffs[i] = {val=max[i]-min[i],ind=i}
-        end
-        table.sort(diffs,function(a,b) return a.val > b.val end)
-        return diffs[1].ind
-    end
+    local SORT_BY_RED = function(a,b) return a[1] > b[1] end
+    local SORT_BY_GRN = function(a,b) return a[2] > b[2] end
+    local SORT_BY_BLU = function(a,b) return a[3] > b[3] end
 
-    local function add_color(c1,c2)
-        return {
-            c1[1] + c2[1],
-            c1[2] + c2[2],
-            c1[3] + c2[3],
-        }
-    end
+    local function widest_channel_sort(r_min,g_min,b_min,r_max,g_max,b_max)
+        local r_channel_delta = r_max-r_min
+        local g_channel_delta = g_max-g_min
+        local b_channel_delta = b_max-b_min
 
-    local function color_chunk(total,count)
-        return {
-            total[1] / count,
-            total[2] / count,
-            total[3] / count
-        }
-    end
-
-    local MAX,MIN = math.max,math.min
-
-    local function median_cut(tbl,splits,parts,splited)
-        if splited < splits then
-            local max = {
-                -math.huge,
-                -math.huge,
-                -math.huge,
-            }
-            local min = {
-                math.huge,
-                math.huge,
-                math.huge
-            }
-
-            local diffirences = arr_util.create_multilayer_list(1)
-            for k,v in pairs(tbl) do
-                for i=1,3 do
-                    max[i] = MAX(max[i],v[i])
-                    min[i] = MIN(min[i],v[i])
-                    diffirences[k][i] = v[i]
-                end
-            end
-
-            local mchan = get_most_channel(max,min)
-            table.sort(tbl,function(a,b)
-                return a[mchan] > b[mchan]
-            end)
-
-            local split = {{},{}}
-
-            for i=1,#tbl do
-                local index = math.ceil((i*2)/#tbl)
-                local t = split[index]
-                t[#t+1] = tbl[i]
-            end
-
-            median_cut(split[1],splits,parts,splited+1)
-            median_cut(split[2],splits,parts,splited+1)
+        if r_channel_delta > g_channel_delta and r_channel_delta > b_channel_delta then
+            return SORT_BY_RED
+        elseif g_channel_delta > r_channel_delta and g_channel_delta > b_channel_delta then
+            return SORT_BY_GRN
         else
-            local count = 0
-            local total = {0,0,0}
-            for k,v in pairs(tbl) do
-                total = add_color(v,total)
-                count = count + 1
+            return SORT_BY_BLU
+        end
+    end
+
+    local function add_to_color(base_color,added)
+        base_color[1] = base_color[1] + added[1]
+        base_color[2] = base_color[2] + added[2]
+        base_color[3] = base_color[3] + added[3]
+    end
+
+    local function divide_color(color,divisor)
+        color[1] = color[1] / divisor
+        color[2] = color[2] / divisor
+        color[3] = color[3] / divisor
+    end
+
+    local MAX,MIN    = math.max,math.min
+    local HUGE       = math.huge
+    local TABLE_SORT = table.sort
+
+    local function median_cut(tbl,splits,parts,split_count)
+        local tbl_len = #tbl
+
+        if split_count < splits then
+            local r_max = -HUGE
+            local g_max = -HUGE
+            local b_max = -HUGE
+
+            local r_min = HUGE
+            local g_min = HUGE
+            local b_min = HUGE
+
+            for c_index=1,tbl_len do
+                local color = tbl[c_index]
+                local r,g,b = color[1],color[2],color[3]
+
+                r_min = MIN(r_min,r)
+                g_min = MIN(g_min,g)
+                b_min = MIN(b_min,b)
+
+                r_max = MAX(r_max,r)
+                g_max = MAX(g_max,g)
+                b_max = MAX(b_max,b)
             end
-            parts[#parts+1] = color_chunk(total,count)
+
+            local sort_func = widest_channel_sort(
+                r_min,g_min,b_min,
+                r_max,g_max,b_max
+            )
+
+            TABLE_SORT(tbl,sort_func)
+
+            local split_point  = math.floor(tbl_len/2+0.5)
+            local split_list_1 = {}
+            local split_list_2 = {}
+
+            for i=1,split_point do
+                split_list_1[i] = tbl[i]
+            end
+            for i=split_point+1,tbl_len do
+                split_list_2[i-split_point] = tbl[i]
+            end
+
+            median_cut(split_list_1,splits,parts,split_count+1)
+            median_cut(split_list_2,splits,parts,split_count+1)
+        else
+            local base_color = {0,0,0}
+
+            for c_index=1,tbl_len do
+                local color = tbl[c_index]
+                add_to_color(base_color,color)
+            end
+
+            divide_color(base_color,tbl_len)
+
+            parts[#parts+1] = base_color
         end
         return parts
     end
 
-    local function deduplicate_color_list(color_list)
+    local function deduplicate_color_list(color_list,bit_resolution)
+        bit_resolution = bit_resolution or 8
+
         local unique_colors = {}
-        local color_lookup  = arr_util.create_multilayer_list(2)
+        local color_lookup  = {}
 
-        for k,color in ipairs(color_list) do
-            local r = color[1]
-            local g = color[2]
-            local b = color[3]
+        local base_resolution_scale = 2^bit_resolution - 1
 
-            if not color_lookup[r][g][b] then
-                unique_colors[#unique_colors+1] = color
-                color_lookup[r][g][b] = true
+        local g_bit_shift = 2^bit_resolution
+        local r_bit_shift = g_bit_shift^2
+
+        local unique_color_count = 0
+
+        for color_idx=1,#color_list do
+            local color = color_list[color_idx]
+
+            local r = color[1] * base_resolution_scale
+            local g = color[2] * base_resolution_scale
+            local b = color[3] * base_resolution_scale
+
+            r = r - r % 1
+            g = g - g % 1
+            b = b - b % 1
+
+            local index = r * r_bit_shift + g * g_bit_shift + b
+
+            if not color_lookup[index] then
+                unique_color_count = unique_color_count + 1
+
+                unique_colors[unique_color_count] = color
+
+                color_lookup[index] = true
             end
         end
 
         return unique_colors
     end
 
-    local function median_cut_color_list(color_list,splits)
-        local unique_color_list = deduplicate_color_list(color_list)
+    local function median_cut_color_list(color_list,splits,dedup_bits)
+        local unique_color_list = deduplicate_color_list(color_list,dedup_bits)
 
         if #unique_color_list <= 2^splits then
             return unique_color_list
@@ -137,19 +175,16 @@ return {init=function(box,module,api,share,api_init,load_flags)
             },
             internal = {
                 deduplicate_color_list = deduplicate_color_list,
-                get_most_channel       = get_most_channel,
-                color_chunk            = color_chunk,
+                widest_channel_sort    = widest_channel_sort,
+                divide_color           = divide_color,
                 median_cut             = median_cut,
-                add_color              = add_color,
+                add_to_color           = add_to_color,
+                SORT_BY_RED            = SORT_BY_RED,
+                SORT_BY_GRN            = SORT_BY_GRN,
+                SORT_BY_BLU            = SORT_BY_BLU
             }
         }
-    },{verified_load=function()
-        if not box.modules["PB_MODULE:arrutil"] then
-            api.module_error(module,"Missing dependency PB_MODULE:arrutil",3,load_flags.supress)
-        end
-
-        arr_util = box.modules["PB_MODULE:arrutil"].__fn.arrutil
-    end}
+    },{}
 end,
     id         = "PB_MODULE:medcut",
     name       = "PB_MedianCut",
