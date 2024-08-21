@@ -1,6 +1,4 @@
 return {init=function(_,_,_,_,_,_)
-    local arr_util
-
     local SORT_BY_RED = function(a,b) return a[1] > b[1] end
     local SORT_BY_GRN = function(a,b) return a[2] > b[2] end
     local SORT_BY_BLU = function(a,b) return a[3] > b[3] end
