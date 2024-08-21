@@ -78,66 +78,75 @@ return {init=function(box,module,api,_,_,load_flags)
         return palette_base
     end
 
+    local function palette_from_terminal(terminal)
+        terminal = terminal or box.term
+        return func_palette(terminal.getPaletteColor)
+    end
+    local function palette_from_native()
+        return func_palette(term.nativePaletteColor)
+    end
+    local function palette_from_color_list(pal_colors)
+        local palette_base = {}
+        for k,v in pairs(pal_colors) do
+            palette_base[#palette_base+1] = {
+                palette_index = k,
+                color = {
+                    r=v[1],g=v[2],b=v[3]
+                }
+            }
+        end
+
+        palette_base_init(palette_base)
+
+        return palette_base
+    end
+
+    local function palette_index_from_rgb(color_space,r,g,b)
+        local r_snapped = r*color_space.r_upper_bound
+        local g_snapped = g*color_space.g_upper_bound
+        local b_snapped = b*color_space.b_upper_bound
+
+        r_snapped = r_snapped - r_snapped % 1
+        g_snapped = g_snapped - g_snapped % 1
+        b_snapped = b_snapped - b_snapped % 1
+
+        return color_space[r_snapped][g_snapped][b_snapped]
+    end
+
+    local function user_end_make_colorspace(palette,scale_r_res,g_res,b_res)
+        if not scale_r_res then
+            scale_r_res = math.sqrt(#palette)*2
+        end
+
+        if not g_res or not b_res then
+            g_res = scale_r_res
+            b_res = scale_r_res
+        end
+
+        return generate_lookup_space(
+            palette,
+            scale_r_res,
+            g_res,
+            b_res
+        )
+    end
+
     return {
         rgbquant={
-            from_rgb=function(color_space,r,g,b)
-                local r_snapped = r*color_space.r_upper_bound
-                local g_snapped = g*color_space.g_upper_bound
-                local b_snapped = b*color_space.b_upper_bound
+            from_rgb       =palette_index_from_rgb,
+            make_colorspace=user_end_make_colorspace,
 
-                r_snapped = r_snapped - r_snapped % 1
-                g_snapped = g_snapped - g_snapped % 1
-                b_snapped = b_snapped - b_snapped % 1
-
-                return color_space[r_snapped][g_snapped][b_snapped]
-            end,
-            make_colorspace=function(palette,scale_r_res,g_res,b_res)
-                if not scale_r_res then
-                    scale_r_res = math.sqrt(#palette)*2
-                end
-
-                if not g_res or not b_res then
-                    g_res = scale_r_res
-                    b_res = scale_r_res
-                end
-
-                return generate_lookup_space(
-                    palette,
-                    scale_r_res,
-                    g_res,
-                    b_res
-                )
-            end,
             pal={
-                from_term=function(terminal)
-                    terminal = terminal or box.term
-                    return func_palette(terminal.getPaletteColor)
-                end,
-                from_native=function()
-                    return func_palette(term.nativePaletteColor)
-                end,
-                from_list=function(pal_colors)
-                    local palette_base = {}
-                    for k,v in pairs(pal_colors) do
-                        palette_base[#palette_base+1] = {
-                            palette_index = k,
-                            color = {
-                                r=v[1],g=v[2],b=v[3]
-                            }
-                        }
-                    end
-
-                    palette_base_init(palette_base)
-
-                    return palette_base
-                end
+                from_term  =palette_from_terminal,
+                from_native=palette_from_native,
+                from_list  =palette_from_color_list
             },
             internal={
-                SMALL_TO_LARGE        =SMALL_TO_LARGE,
-                pythagorean_quantize  =pythagorean_quantize,
-                generate_lookup_space =generate_lookup_space,
-                palette_base_init     =palette_base_init,
-                func_palette          =func_palette
+                SMALL_TO_LARGE       =SMALL_TO_LARGE,
+                pythagorean_quantize =pythagorean_quantize,
+                generate_lookup_space=generate_lookup_space,
+                palette_base_init    =palette_base_init,
+                func_palette         =func_palette
             }
         }
     },{verified_load=function()
