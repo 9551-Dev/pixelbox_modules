@@ -8,12 +8,14 @@ return {init=function(_,_,_,_,_,_)
         local g_channel_delta = g_max-g_min
         local b_channel_delta = b_max-b_min
 
-        if r_channel_delta > g_channel_delta and r_channel_delta > b_channel_delta then
+        if r_channel_delta >= g_channel_delta and r_channel_delta >= b_channel_delta then
             return SORT_BY_RED
-        elseif g_channel_delta > r_channel_delta and g_channel_delta > b_channel_delta then
+        elseif g_channel_delta >= r_channel_delta and g_channel_delta >= b_channel_delta then
             return SORT_BY_GRN
-        else
+        elseif b_channel_delta >= r_channel_delta and b_channel_delta >= g_channel_delta then
             return SORT_BY_BLU
+        else
+            return SORT_BY_GRN
         end
     end
 
