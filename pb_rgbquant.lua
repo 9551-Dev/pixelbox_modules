@@ -1,35 +1,44 @@
 return {init=function(box,module,api,_,_,load_flags)
-    local function SMALL_TO_LARGE(a,b)
-        return a.distance < b.distance
-    end
+    local dep_arrutil
 
-    local arr_util
-
-    local TABLE_SORT = table.sort
-    local function pythagorean_quantize(palette,r,g,b)
-        local distance_vectors = palette.dist
-
-        for i=1,#palette do
-            local palette_entry = palette[i].color
-
-            local delta_r = palette_entry.r - r
-            local delta_g = palette_entry.g - g
-            local delta_b = palette_entry.b - b
-
-            local distance_vector = distance_vectors[i]
-
-            -- ommiting sqrt
-            distance_vector.distance = delta_r^2+delta_g^2+delta_b^2
-            distance_vector.index    = palette[i].palette_index
+    local function pythagorean_quantize(palette,r,g,b,color_space)
+        if color_space then
+            r,g,b = color_space(r,g,b)
         end
 
-        TABLE_SORT(distance_vectors,SMALL_TO_LARGE)
+        local closest_distance = math.huge
+        local closest_index    = nil
 
-        return distance_vectors[1].index
+        for pal_index=1,#palette do
+            local palette_entry = palette[pal_index].color
+
+            local palette_a,palette_b,palette_c
+                = palette_entry.r,palette_entry.g,palette_entry.b
+
+            if color_space then
+                palette_a,palette_b,palette_c = color_space(
+                    palette_a,palette_b,palette_c
+                )
+            end
+
+            local delta_r = palette_a - r
+            local delta_g = palette_b - g
+            local delta_b = palette_c - b
+
+
+            -- ommiting sqrt
+            local color_distance = delta_r^2+delta_g^2+delta_b^2
+            if color_distance <= closest_distance then
+                closest_distance = color_distance
+                closest_index    = palette[pal_index].palette_index
+            end
+        end
+
+        return closest_index
     end
 
-    local function generate_lookup_space(base,r_res,g_res,b_res)
-        local color_space = arr_util.create_multilayer_list(2)
+    local function generate_lookup_space(base,r_res,g_res,b_res,data_colorspace)
+        local color_space = dep_arrutil.create_multilayer_list(2)
 
         for r_position=0,r_res do
             for g_position=0,g_res do
@@ -39,7 +48,8 @@ return {init=function(box,module,api,_,_,load_flags)
                     local b_normalized = b_position/b_res
 
                     color_space[r_position][g_position][b_position] = pythagorean_quantize(
-                        base,r_normalized,g_normalized,b_normalized
+                        base,r_normalized,g_normalized,b_normalized,
+                        data_colorspace
                     )
                 end
             end
@@ -50,55 +60,6 @@ return {init=function(box,module,api,_,_,load_flags)
         color_space.b_upper_bound = b_res
 
         return color_space
-    end
-
-    local function palette_base_init(base)
-        local distance_vectors = {}
-        for i=1,#base do distance_vectors[i] = {} end
-
-        base.dist = distance_vectors
-    end
-
-    local function func_palette(pal_func)
-        local palette_base = {}
-
-        for i=0,15 do
-            local pal_idx = 2^i
-            local pr,pg,pb = pal_func(pal_idx)
-            palette_base[#palette_base+1] =  {
-                palette_index = pal_idx,
-                color = {
-                    r=pr,g=pg,b=pb
-                }
-            }
-        end
-
-        palette_base_init(palette_base)
-
-        return palette_base
-    end
-
-    local function palette_from_terminal(terminal)
-        terminal = terminal or box.term
-        return func_palette(terminal.getPaletteColor)
-    end
-    local function palette_from_native()
-        return func_palette(term.nativePaletteColor)
-    end
-    local function palette_from_color_list(pal_colors)
-        local palette_base = {}
-        for k,v in pairs(pal_colors) do
-            palette_base[#palette_base+1] = {
-                palette_index = k,
-                color = {
-                    r=v[1],g=v[2],b=v[3]
-                }
-            }
-        end
-
-        palette_base_init(palette_base)
-
-        return palette_base
     end
 
     local function palette_index_from_rgb(color_space,r,g,b)
@@ -113,7 +74,7 @@ return {init=function(box,module,api,_,_,load_flags)
         return color_space[r_snapped][g_snapped][b_snapped]
     end
 
-    local function user_end_make_colorspace(palette,scale_r_res,g_res,b_res)
+    local function user_end_make_colorspace(palette,scale_r_res,g_res,b_res,color_space)
         if not scale_r_res then
             scale_r_res = math.sqrt(#palette)*2
         end
@@ -125,28 +86,19 @@ return {init=function(box,module,api,_,_,load_flags)
 
         return generate_lookup_space(
             palette,
-            scale_r_res,
-            g_res,
-            b_res
+            scale_r_res,g_res,b_res,
+            color_space
         )
     end
 
     return {
-        rgbquant={
-            from_rgb       =palette_index_from_rgb,
-            make_colorspace=user_end_make_colorspace,
+        rgbquant = {
+            from_rgb        = palette_index_from_rgb,
+            make_colorspace = user_end_make_colorspace,
 
-            pal={
-                from_term  =palette_from_terminal,
-                from_native=palette_from_native,
-                from_list  =palette_from_color_list
-            },
-            internal={
-                SMALL_TO_LARGE       =SMALL_TO_LARGE,
-                pythagorean_quantize =pythagorean_quantize,
-                generate_lookup_space=generate_lookup_space,
-                palette_base_init    =palette_base_init,
-                func_palette         =func_palette
+            internal = {
+                pythagorean_quantize  = pythagorean_quantize,
+                generate_lookup_space = generate_lookup_space,
             }
         }
     },{verified_load=function()
@@ -154,7 +106,7 @@ return {init=function(box,module,api,_,_,load_flags)
             api.module_error(module,"Missing dependency PB_MODULE:arrutil",3,load_flags.supress)
         end
 
-        arr_util = box.modules["PB_MODULE:arrutil"].__fn.arrutil
+        dep_arrutil = box.modules["PB_MODULE:arrutil"].__fn.arrutil
     end}
 end,
     id         = "PB_MODULE:rgbquant",

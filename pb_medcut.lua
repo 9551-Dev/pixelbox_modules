@@ -31,7 +31,6 @@ return {init=function(_,_,_,_,_,_)
         color[3] = color[3] / divisor
     end
 
-    local MAX,MIN    = math.max,math.min
     local HUGE       = math.huge
     local TABLE_SORT = table.sort
 
@@ -51,13 +50,13 @@ return {init=function(_,_,_,_,_,_)
                 local color = tbl[c_index]
                 local r,g,b = color[1],color[2],color[3]
 
-                r_min = MIN(r_min,r)
-                g_min = MIN(g_min,g)
-                b_min = MIN(b_min,b)
+                if r < r_min then r_min = r end
+                if g < r_min then g_min = g end
+                if b < b_min then b_min = b end
 
-                r_max = MAX(r_max,r)
-                g_max = MAX(g_max,g)
-                b_max = MAX(b_max,b)
+                if r > r_max then r_max = r end
+                if g > g_max then g_max = g end
+                if b > b_max then b_max = b end
             end
 
             local sort_func = widest_channel_sort(
@@ -143,36 +142,9 @@ return {init=function(_,_,_,_,_,_)
         end
     end
 
-    local SECOND_POWER_INDEXER = function(n) return 2^(n-1) end
-    local LINEAR_RISE_INDEXER  = function(n) return n       end
-
-    local function to_palette_with_indexer(colors,indexer)
-        indexer = indexer or SECOND_POWER_INDEXER
-
-        local palette_base = {}
-        for color_index=1,#colors do
-            palette_base[indexer(color_index)] = colors[color_index]
-        end
-
-        return palette_base
-    end
-
-    local function apply_palette_term(pal_colors,terminal)
-        terminal = terminal or term
-        for pal_index,color in pairs(pal_colors) do
-            terminal.setPaletteColor(pal_index,table.unpack(color))
-        end
-    end
-
     return {
-        medcut={
+        medcut = {
             from_color_list = median_cut_color_list,
-            to_palette      = to_palette_with_indexer,
-            apply_palette   = apply_palette_term,
-            idx = {
-                SECOND_POWER = SECOND_POWER_INDEXER,
-                LINEAR_RISE  = LINEAR_RISE_INDEXER
-            },
             internal = {
                 deduplicate_color_list = deduplicate_color_list,
                 widest_channel_sort    = widest_channel_sort,

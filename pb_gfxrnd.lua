@@ -1,21 +1,21 @@
-return {init=function(box,module,api,share,_,flags)
+return {init=function(box,module,api,share,_,load_flags)
     local function check_graphics_mode(terminal)
         if terminal.getGraphicsMode() ~= 1 then
             if not share.set_term_mode then
-                api.module_error(module,"Terminal graphics mode must be \"1\"",3,flags.supress)
+                api.module_error(module,"Terminal graphics mode must be \"1\"",3,load_flags.supress)
             else terminal.setGraphicsMode(1) end
         end
     end
 
     return {
-        render=function(self)
+        render = function(self)
             check_graphics_mode(self.term)
             self.term.drawPixels(1,1,self.canvas)
         end
     },{
         verified_load=function()
             if box.term.drawPixels == nil then
-                api.module_error(module,"Target terminal doesnt have GFX mode",3,flags.supress)
+                api.module_error(module,"Target terminal doesnt have GFX mode",3,load_flags.supress)
             end
 
             local w,h = box.term.getSize(1)
