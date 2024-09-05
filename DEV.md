@@ -19,20 +19,31 @@ Arguments:
 - `initialized?` - Whether or not pixelbox generated the lookups.
   -  "you could for example modify the sampling_lookup to lower the teletext char artifacting for a specific usecase (like a graph or something idk)"
   - \- devvie (i have no clue about what that shit means)
-- `load-flags` - Things passed into the modules table when loading them.
+- `load_flags` - Things passed into the modules table when loading them.
 
 Return values:
 - `values` - Values inserted into the pixelbox object.
   - Note, however, that you cannot replace values that are already in the box,
-  like canvas.
+  except functions.
 - `callbacks` - refer to the [callbacks](#callbacks) section.
 
 # Callbacks
 
-## `verified-load`
+## `verified_load`
 This is called when pixelbox is done initializing modules.
 
 It takes no arguments, and is not expected to return anything.
+
+# Pixelbox api
+
+## `module_error`
+This function throws a fancy error, formatted by pixelbox.
+
+Arguments:
+- `module` - Your module information, use the argument passed to init.
+- `str` - Error string, passed to `error`.
+- `level` - Erorr level, passed to `error`.
+- `supress_error` - Whether to actually throw the error... wuh??
 
 ### Written by @viw-ty
 mention/email me if this is outdated/wrong
