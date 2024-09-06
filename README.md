@@ -1,6 +1,9 @@
 # <img src="./assets/logo.png" width="50"></img> Pixelbox modules
 Hopefully soon to be growing collection of modules and tools to be loading and used with [pixelbox_lite](https://github.com/9551-Dev/pixelbox_lite)
 
+## Developing modules
+Check DEV.md for explanations of arguments, return values, and callbacks.
+
 ## Module index
 - [[**`pb_gfxrnd`**]](#pixelbox-gfxrender) - CCPC GFX mode integration
 - [[**`pb_analyzer`**]](#pixelbox-analyzer) - Buffer debugging tool
