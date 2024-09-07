@@ -19,13 +19,15 @@ I'd prefer emails, but discord is also fine.
 
 **Example Usage:**
 
-    local image = paintutils.loadImage("image.nfp")
-    for _, row in pairs(image) do
-        for k, col in pairs(row) do
-            if col == 0 then
-                row[k] = nil
-            end
+```lua
+local image = paintutils.loadImage("image.nfp")
+for _, row in pairs(image) do
+    for k, col in pairs(row) do
+        if col == 0 then
+            row[k] = nil
         end
     end
+end
 
-    table.insert(box.layers, image)
+table.insert(box.layers, image)
+```
