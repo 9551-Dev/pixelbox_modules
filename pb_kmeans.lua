@@ -1,5 +1,4 @@
-return {init=function(box,module,api,share,api_init,load_flags)
-    local function SMALL_TO_LARGE(a,b) return a.distance < b.distance end
+return {init=function(_,_,_,_,_,_)
     local function find_closest_centroid(r,g,b,centroids,count,colorspace)
         local target_r,target_g,target_b = r,g,b
         if colorspace then
@@ -94,7 +93,6 @@ return {init=function(box,module,api,share,api_init,load_flags)
         cluster  = kmeans_cluster,
         internal = {
             find_closest_centroid = find_closest_centroid,
-            SMALL_TO_LARGE        = SMALL_TO_LARGE
         }
     }},{}
 end,

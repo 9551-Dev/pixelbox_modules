@@ -1,6 +1,5 @@
-return {init=function(box,module,api,share,api_init,load_flags)
-    local dep_rgbquant
-    local dep_palutil
+return {init=function(box,module,api,_,_,load_flags)
+    local dep_rgbquant,dep_palutil
 
     local table_concat = table.concat
 
@@ -11,6 +10,20 @@ return {init=function(box,module,api,share,api_init,load_flags)
     local pb_to_blit = api.internal.to_blit_lookup
 
     local rgbquant_colorspace
+
+    local div_255  = 1/255
+    local r_shift  = 1/(16^4)
+    local g_shift  = 1/(16^2)
+    local bit_band = 2^8
+    local function hex_to_screen(hex,bound_r,bound_g,bound_b)
+        local r = ((hex*r_shift)%bit_band)*div_255 * bound_r
+        local g = ((hex*g_shift)%bit_band)*div_255 * bound_g
+        local b = (hex%bit_band)          *div_255 * bound_b
+
+        r,g,b = r-(r%1),g-(g%1),b-(b%1)
+
+        return rgbquant_colorspace[r][g][b]
+    end
 
     local color_lookup  = {}
     local texel_body    = {0,0,0,0,0,0}
@@ -28,9 +41,6 @@ return {init=function(box,module,api,share,api_init,load_flags)
         local grn_upper_bound = rgbquant_colorspace.g_upper_bound
         local blu_upper_bound = rgbquant_colorspace.b_upper_bound
 
-        local red_hex_shift = 16^4
-        local grn_hex_shift = 16^2
-
         local sy = 0
         for y=1,height,3 do
             sy = sy + 1
@@ -46,7 +56,12 @@ return {init=function(box,module,api,share,api_init,load_flags)
                     layer_2[x],layer_2[xp1],
                     layer_3[x],layer_3[xp1]
 
-
+                b1 = hex_to_screen(b1,red_upper_bound,grn_upper_bound,blu_upper_bound)
+                b2 = hex_to_screen(b2,red_upper_bound,grn_upper_bound,blu_upper_bound)
+                b3 = hex_to_screen(b3,red_upper_bound,grn_upper_bound,blu_upper_bound)
+                b4 = hex_to_screen(b4,red_upper_bound,grn_upper_bound,blu_upper_bound)
+                b5 = hex_to_screen(b5,red_upper_bound,grn_upper_bound,blu_upper_bound)
+                b6 = hex_to_screen(b6,red_upper_bound,grn_upper_bound,blu_upper_bound)
 
                 local char,fg,bg = " ",1,b1
 
@@ -136,6 +151,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
             set_lookup_space = set_lookup_space,
             internal = {
                 current_lookup_space     = rgbquant_colorspace,
+                hex_to_screen            = hex_to_screen,
                 setup_default_colorspace = setup_default_colorspace,
                 get_box_color_hex        = get_box_color_hex
             }

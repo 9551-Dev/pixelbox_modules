@@ -1,9 +1,9 @@
-return {init=function(box,module,api,share,api_init,load_flags)
-    error("Not yet finished")
+-- NOTE: THIS MODULE IS HIGHLY UNSTABLE
 
+return {init=function(box,module,api,share,api_init,load_flags)
     local dep_arrutil,dep_medcut,dep_kmeans
 
-    local bit_lib = _G.bit32 or _G.bit
+    local emu_calls = {}
 
     local MODE_TEXT    = 0
     local MODE_GFX_16  = 1
@@ -23,6 +23,10 @@ return {init=function(box,module,api,share,api_init,load_flags)
     local gfx_color_lut_256 = {}
 
     local gfx_color_buffer
+
+    local gfx_quantize_type     = {["median_cut"]=true,["kmeans"]=false}
+    local gfx_kmeans_iterations = 20
+    local gfx_smart_update      = true
 
     local gfx_fps_limit       = 20
     local gfx_epoch_timeframe = (1/gfx_fps_limit)*1000
@@ -113,47 +117,27 @@ return {init=function(box,module,api,share,api_init,load_flags)
         end
     end
 
-    local function rgb_to_oklab(r,g,b)
-        local l = (r*0.4122214708 + g*0.5363325363 + b*0.0514459929)^(1/3)
-        local m = (r*0.2119034982 + g*0.6806995451 + b*0.1073969566)^(1/3)
-        local s = (r*0.0883024619 + g*0.2817188376 + b*0.6299787005)^(1/3)
-
-        return  l*0.2104542553 + m*0.7936177850 - s*0.0040720468,
-                l*1.9779984951 - m*2.4285922050 + s*0.4505937099,
-                l*0.0259040371 + m*0.7827717662 - s*0.8086757660
-    end
-
-    local distance_vectors = {}
-    for i=1,16 do distance_vectors[i] = {} end
-
-    local TABLE_SORT = table.sort
-    local function SMALL_TO_LARGE(a,b) return a.distance < b.distance end
     local function pythagorean_quantize(palette,r,g,b)
-        local cl,ca,cb = rgb_to_oklab(r,g,b)
+        local closest_distance = math.huge
+        local closest_index
 
-        for i=1,#palette do
-            local palette_entry = palette[i]
+        for pal_index=1,#palette do
+            local palette_entry = palette[pal_index]
 
-            local target_l,target_a,target_b = rgb_to_oklab(
-                palette_entry[COLOR_RED],
-                palette_entry[COLOR_GRN],
-                palette_entry[COLOR_BLU]
-            )
-
-            local delta_l = target_l - cl
-            local delta_a = target_a - ca
-            local delta_b = target_b - cb
-
-            local distance_vector = distance_vectors[i]
+            local delta_r = palette_entry[COLOR_RED] - r
+            local delta_g = palette_entry[COLOR_GRN] - g
+            local delta_b = palette_entry[COLOR_BLU] - b
 
             -- ommiting sqrt
-            distance_vector.distance = delta_l^2+delta_a^2+delta_b^2
-            distance_vector.index    = i
+            local distance = delta_r^2+delta_g^2+delta_b^2
+            if distance <= closest_distance then
+                closest_distance = distance
+                closest_index    = pal_index
+            end
         end
 
-        TABLE_SORT(distance_vectors,SMALL_TO_LARGE)
 
-        return distance_vectors[1].index
+        return closest_index
     end
 
     local function init_task_manager()
@@ -240,16 +224,15 @@ return {init=function(box,module,api,share,api_init,load_flags)
     local text_mode_dummy      = init_dummy_buffer(true)
     local text_mode_controller = patch_text_mode(box.term,text_mode_dummy)
 
-    local function base_n_rshift(base,n,shift)
-        return math.floor(n/(base^shift))
-    end
+    local div_255  = 1/255
+    local bit_band = 2^8
 
+    local rgb_r_rshift = 1/(16^4)
+    local rgb_g_rshift = 1/(16^2)
     local function hex_to_rgb(hex)
-        local r_255 = bit_lib.band(0xFF,base_n_rshift(16,hex,4))
-        local g_255 = bit_lib.band(0xFF,base_n_rshift(16,hex,2))
-        local b_255 = bit_lib.band(0xFF,base_n_rshift(16,hex,0))
-
-        return r_255/255,g_255/255,b_255/255
+        return  ((hex*rgb_r_rshift)%bit_band)*div_255,
+                ((hex*rgb_g_rshift)%bit_band)*div_255,
+                (hex%bit_band)               *div_255
     end
 
     local function normalize_mode_id(mode)
@@ -283,14 +266,9 @@ return {init=function(box,module,api,share,api_init,load_flags)
         end
     end
 
-    local function redirect_mode(mode)
-        local current_mode = gfx_mode_state
-        gfx_mode_state = mode
-        return current_mode
-    end
-
     local function populate_palette(terminal)
-        local previous_mode = redirect_mode(MODE_TEXT)
+        local previous_mode = gfx_mode_state
+        gfx_mode_state = MODE_TEXT
 
         for i=0,15 do
             gfx_std_palette[i] = {terminal.getPaletteColor(2^i)}
@@ -299,7 +277,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
             gfx_std_palette[i] = {0,0,0}
         end
 
-        redirect_mode(previous_mode)
+        gfx_mode_state = previous_mode
     end
 
     local function populate_color_buffer(palette_id,keep_existing)
@@ -338,12 +316,12 @@ return {init=function(box,module,api,share,api_init,load_flags)
         end
     end
 
-    local function present_box_buffer()
-        if gfx_mode_state ~= MODE_TEXT and not gfx_frozen then
+    local function present_box_buffer(ignore_frozen)
+        if gfx_mode_state ~= MODE_TEXT and (not gfx_frozen or ignore_frozen) then
             gfx_background_updt = true
 
             local current_epoch = os.epoch("utc")
-            if current_epoch >= gfx_last_update+gfx_epoch_timeframe then
+            if (current_epoch >= gfx_last_update+gfx_epoch_timeframe) or not gfx_smart_update then
                 gfx_last_update     = current_epoch
                 gfx_background_updt = false
 
@@ -388,10 +366,20 @@ return {init=function(box,module,api,share,api_init,load_flags)
                 )-1)
             end
         else
-            local median_palette = dep_medcut.from_color_list(gfx_std_palette,4)
+            local processed_palette
 
-            for i=1,#median_palette do
-                gfx_effective_palette[i] = median_palette[i]
+            if gfx_quantize_type["median_cut"] and gfx_quantize_type["kmeans"] then
+                local median_palette = dep_medcut.from_color_list(gfx_std_palette,4)
+                processed_palette    = dep_kmeans.cluster(gfx_std_palette,median_palette,gfx_kmeans_iterations)
+            elseif gfx_quantize_type["median_cut"] then
+                processed_palette = dep_medcut.from_color_list(gfx_std_palette,4)
+            else
+                processed_palette = {}
+                for i=0,15 do processed_palette[i+1] = {native_term.getPaletteColor(2^i)} end
+            end
+
+            for i=1,#processed_palette do
+                gfx_effective_palette[i] = processed_palette[i]
             end
 
             for i=0,255 do
@@ -412,6 +400,8 @@ return {init=function(box,module,api,share,api_init,load_flags)
     if not box.term.__pb_gfxemu then
         -- gfx functions
         function box.term.setGraphicsMode(mode)
+            emu_calls[#emu_calls+1] = {"setGraphicsMode",mode}
+
             local new_mode_state = normalize_mode_id(mode)
 
             if gfx_mode_state ~= new_mode_state then
@@ -427,6 +417,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
             end
         end
         function box.term.getGraphicsMode()
+            emu_calls[#emu_calls+1] = {"getGraphicsMode",me}
             if gfx_mode_state == MODE_TEXT then
                 return false
             else
@@ -435,17 +426,23 @@ return {init=function(box,module,api,share,api_init,load_flags)
         end
 
         function box.term.getFrozen()
+            emu_calls[#emu_calls+1] = {"getFrozen"}
             return gfx_frozen
         end
         function box.term.setFrozen(state)
-            if gfx_frozen == true and not gfx_frozen then
-                present_box_buffer()
+            emu_calls[#emu_calls+1] = {"setFrozen",state}
+            local new_state = not not state
+
+            if gfx_frozen == true and not new_state then
+                update_gfx_buffer()
+                box.render(text_mode_buffer_box)
             end
 
             gfx_frozen = not not state
         end
 
         function box.term.setPixel(x,y,color)
+            emu_calls[#emu_calls+1] = {"setPixel",x,y,color}
             gfx_color_buffer[y+1][x+1] = normalize_palette_id(gfx_mode_state,color)
 
             present_box_buffer()
@@ -462,19 +459,50 @@ return {init=function(box,module,api,share,api_init,load_flags)
         end
 
         function box.term.drawPixels(x,y,pixels_color,width,height)
+            emu_calls[#emu_calls+1] = {"drawPixels",x,y,pixels_color,width,height}
             local pixel_type = type(pixels_color)
             if pixel_type == "number" then
                 local standard_color = normalize_palette_id(gfx_mode_state,pixels_color)
                 draw_pixels_fill(x,y,width,height,standard_color)
+            elseif pixel_type == "table" then
+                local scanline_count = height or #pixels_color
+
+                for scanline_index=1,scanline_count do
+                    local scanline = pixels_color[scanline_index]
+                    local scantype = type(scanline)
+
+                    if scantype == "table" then
+                        local scan_width = width or #scanline
+
+                        local gfx_scanline = gfx_color_buffer[scanline_index+y]
+
+                        for pixel_index=1,scan_width do
+                            local pixel = scanline[pixel_index]
+                            if pixel then
+                                gfx_scanline[pixel_index+x] = normalize_palette_id(gfx_mode_state,pixel)
+                            end
+                        end
+                    elseif scantype == "string" then
+                        local scan_width = width or #scanline
+
+                        local gfx_scanline = gfx_color_buffer[scanline_index+y]
+
+                        for pixel_index=1,scan_width do
+                            gfx_scanline[pixel_index+x] = scanline:byte(pixel_index,pixel_index)
+                        end
+                    end
+                end
             end
 
             present_box_buffer()
         end
         function box.term.getPixel(x,y)
+            emu_calls[#emu_calls+1] = {"getPixel",x,y}
             local color = gfx_color_buffer[y+1][x+1]
             return format_palette_id(color,gfx_mode_state)
         end
         function box.term.getPixels(x,y,width,height)
+            emu_calls[#emu_calls+1] = {"getPixels",x,y,width,height}
             local area_result = {}
             local scanline_index = 0
 
@@ -508,6 +536,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
 
         -- base terminal patches
         function box.term.setPaletteColor(palette_id,r_hex,g,b)
+            emu_calls[#emu_calls+1] = {"setPaletteColor",palette_id,r_hex,g,b}
             local normalized_id = normalize_palette_id(gfx_mode_state,palette_id)
 
             local gfx_palette_entry = gfx_std_palette[normalized_id]
@@ -524,9 +553,15 @@ return {init=function(box,module,api,share,api_init,load_flags)
             gfx_palette_entry[COLOR_GRN] = g
             gfx_palette_entry[COLOR_BLU] = b
 
-            last_palette_update = os.epoch("utc")
+            if gfx_smart_update then
+                last_palette_update = os.epoch("utc")
+            else
+                update_gfx_palette()
+                present_box_buffer()
+            end
         end
         function box.term.getPaletteColor(palette_id)
+            emu_calls[#emu_calls+1] = {"getPaletteColor",palette_id}
             local normalized_id = normalize_palette_id(gfx_mode_state,palette_id)
 
             local gfx_palette_entry = gfx_std_palette[normalized_id]
@@ -540,6 +575,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
                     gfx_palette_entry[COLOR_BLU]
         end
         function box.term.clear()
+            emu_calls[#emu_calls+1] = {"clear"}
             if gfx_mode_state == MODE_TEXT then
                 text_mode_buffer.clear()
             else
@@ -547,6 +583,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
             end
         end
         function box.term.getSize(mode)
+            emu_calls[#emu_calls+1] = {"getSize",mode}
             local width,height = text_mode_buffer.getSize()
             if mode then
                 local mode = normalize_mode_id(mode)
@@ -560,8 +597,94 @@ return {init=function(box,module,api,share,api_init,load_flags)
         end
     end
 
+    local function set_quantize_type(type)
+        if type == "none" then
+            gfx_quantize_type["kmeans"]     = false
+            gfx_quantize_type["median_cut"] = false
+        elseif type == "kmeans" and dep_kmeans then
+            gfx_quantize_type["kmeans"]     = true
+            gfx_quantize_type["median_cut"] = true
+        elseif type == "median_cut" then
+            gfx_quantize_type["kmeans"]     = false
+            gfx_quantize_type["median_cut"] = true
+        end
+
+        return box.gfxemu
+    end
+
+    local function set_smart_update(state)
+        gfx_smart_update = not not state
+
+        return box.gfxemu
+    end
+
+    local function set_update_fps(fps)
+        gfx_fps_limit       = fps
+        gfx_epoch_timeframe = (1/gfx_fps_limit)*1000
+
+        return box.gfxemu
+    end
+
+    local function add_gfxemu_ref()
+        box.term.gfxemu = box.gfxemu
+
+        return box.gfxemu
+    end
+
     return {gfxemu = {
-        import_text_buffer=import_text_mode_buffer
+        import_text_buffer = import_text_mode_buffer,
+        set_quantize_type  = set_quantize_type,
+        set_smart_update   = set_smart_update,
+        set_update_fps     = set_update_fps,
+        add_reference      = add_gfxemu_ref,
+
+        internal = {
+            emu_calls = emu_calls,
+            enum = {
+                MODE_TEXT    = MODE_TEXT,
+                MODE_GFX_16  = MODE_GFX_16,
+                MODE_GFX_256 = MODE_GFX_256,
+
+                COLOR_RED = COLOR_RED,
+                COLOR_GRN = COLOR_GRN,
+                COLOR_BLU = COLOR_BLU,
+            },
+            data = {
+                text_mode_methods = text_mode_methods,
+                log_2_color       = log_2_color
+            },
+            gfx = {
+                standard_palette   = gfx_std_palette,
+                effective_palette  = gfx_effective_palette,
+                mode_256_color_lut = gfx_color_lut_256,
+                mode_16_color_lut  = gfx_color_lut_16,
+                quantize_type      = gfx_quantize_type,
+
+                update_buffer      = update_gfx_buffer,
+                present_box        = present_box_buffer,
+                update_mode_state  = update_gfx_buffer,
+                apply_effective_p  = apply_effective_palette,
+                update_gfx_palette = update_gfx_palette
+            },
+            buffer = {
+                box_redirected   = text_mode_buffer_box,
+                text_mode_buffer = text_mode_buffer,
+                text_mode_dummy  = text_mode_dummy,
+                text_mode_switch = text_mode_controller,
+            },
+            f = {
+                flush_buffer_to      = flush_to_buffer,
+                make_dummy_buffer    = init_dummy_buffer,
+                limitless_sleep      = limitless_sleep,
+                init_task_manager    = init_task_manager,
+                patch_text_mode      = patch_text_mode,
+                hex_to_rgb           = hex_to_rgb,
+                normalize_mode_id    = normalize_mode_id,
+                normalize_palette_id = normalize_palette_id,
+                format_palette_id    = format_palette_id,
+                populate_palette     = populate_palette,
+            }
+        }
     }},{verified_load=function()
         if not box.modules["PB_MODULE:medcut"] then
             api.module_error(module,"Missing dependency PB_MODULE:medcut",3,load_flags.supress)
@@ -572,7 +695,14 @@ return {init=function(box,module,api,share,api_init,load_flags)
 
         dep_medcut  = box.modules["PB_MODULE:medcut"] .__fn.medcut
         dep_arrutil = box.modules["PB_MODULE:arrutil"].__fn.arrutil
-        --dep_kmeans   = box.modules["PB_module:kmeans"].__fn.kmeans
+
+
+        if box.modules["PB_MODULE:kmeans"] then
+            dep_kmeans  = box.modules["PB_MODULE:kmeans"].__fn.kmeans
+            if not load_flags.gfxemu_disable_kmeans then
+                gfx_quantize_type["kmeans"] = true
+            end
+        end
 
         gfx_color_buffer = dep_arrutil.create_multilayer_list(1)
 
@@ -587,14 +717,15 @@ return {init=function(box,module,api,share,api_init,load_flags)
         if not box.term.__pb_gfxemu then
             task_manager[("PIXELBOX:gfxrnd->%s"):format(box.term)] = {coro=coroutine.create(function()
                 while true do
-                    if gfx_background_updt and not gfx_frozen then
+
+                    if gfx_smart_update and gfx_background_updt and not gfx_frozen then
                         gfx_background_updt = false
 
                         update_gfx_buffer()
                         box.render(text_mode_buffer_box)
                     end
 
-                    if last_palette_update then
+                    if gfx_smart_update and last_palette_update then
                         if os.epoch("utc") > (last_palette_update+gfx_epoch_timeframe) and not gfx_frozen then
                             update_gfx_palette()
                             present_box_buffer()
