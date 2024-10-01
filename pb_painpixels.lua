@@ -1,5 +1,7 @@
-return {init=function(box)
+return {init=function(box,_,_,_,_,load_flags)
     local math_abs = math.abs
+
+    local autorender = false
 
     local function std_math_round(n)
         local shifted = n + 0.5
@@ -69,12 +71,16 @@ return {init=function(box)
                 end
             end
         end
+
+        if autorender then box:render() end
     end
 
     local function extern_draw_pixel(x,y,color)
         x,y = std_math_round(x),std_math_round(y)
 
         box.canvas[y][x] = color
+
+        if autorender then box:render() end
     end
 
     local function extern_draw_line(x1,y1,x2,y2,color)
@@ -102,6 +108,8 @@ return {init=function(box)
         else
             draw_line_internal(x1,y1,x2,y2,color)
         end
+
+        if autorender then box:render() end
     end
 
     local function extern_draw_box(x,y,width,height,color)
@@ -126,6 +134,8 @@ return {init=function(box)
             top_scanline   [x] = color
             bottom_scanline[x] = color
         end
+
+        if autorender then box:render() end
     end
 
     local function extern_draw_filled_box(x,y,width,height,color)
@@ -143,6 +153,8 @@ return {init=function(box)
                 scanline[x] = color
             end
         end
+
+        if autorender then box:render() end
     end
 
     local function extern_draw_image(x,y,image)
@@ -161,6 +173,12 @@ return {init=function(box)
                 canvas_scanline[pixel_index+x-1] = pixel_color
             end
         end
+
+        if autorender then box:render() end
+    end
+
+    local function set_autotrender(state)
+        autorender = not not state
     end
 
     return {painp={
@@ -182,11 +200,17 @@ return {init=function(box)
         draw_image      = extern_draw_image,
         draw_filled_box = extern_draw_filled_box,
 
+        autorender = set_autotrender,
+
         internal = {
             std_math_round = std_math_round,
             draw_line      = draw_line_internal
         }
-    }},{}
+    }},{verified_load=function()
+        if load_flags.painpixels_autorender then
+            autorender = true
+        end
+    end}
 end,
     id         = "PB_MODULE:painpixels",
     name       = "PB_PainPixels",
