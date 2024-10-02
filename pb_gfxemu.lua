@@ -589,7 +589,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
                 local mode = normalize_mode_id(mode)
 
                 if mode == MODE_GFX_16 or mode == MODE_GFX_256 then
-                    return width*2,height*3
+                    return box.width,box.height
                 end
             end
 

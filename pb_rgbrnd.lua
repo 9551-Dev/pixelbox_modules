@@ -157,6 +157,10 @@ return {init=function(box,module,api,_,_,load_flags)
             }
         }
     },{verified_load=function()
+        if not box.__pixelbox_lite then
+            api.module_error(module,"Can only be used with standard pixelbox_lite",4,load_flags.supress)
+        end
+
         if not box.modules["PB_MODULE:rgbquant"] then
             api.module_error(module,"Missing dependency PB_MODULE:rgbquant",4,load_flags.supress)
         end
