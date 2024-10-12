@@ -22,14 +22,10 @@ jobs:
       - name: minify Lua files
         run: |
           mkdir -p minified
-          find . -name "*.lua" -not -path "./minified/*" -print0 | while IFS= read -r -d '' file; do
-            target="minified/$file"
-            mkdir -p "$(dirname "$target")"
-            echo "Minifying $file -> $target"
-            ./bin/illuaminate minify "$file" > "$target"
+          find . -name "*.lua" -not -path "./minified/*" | while read -r file; do
+            mkdir -p "minified/$(dirname "$file")"
+            ./bin/illuaminate minify "$file" > "minified/$file"
           done
-
-
       - name: Push stuff branch
         run: |
           git config --global user.name "github-actions[bot]"
