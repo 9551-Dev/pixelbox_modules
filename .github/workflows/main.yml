@@ -21,10 +21,9 @@ jobs:
           fi
       - name: minify Lua files
         run: |
-          mkdir -p minified
-          find . -name "*.lua" -not -path "./minified/*" | while read -r file; do
-            mkdir -p "minified/$(dirname "$file")"
-            ./bin/illuaminate minify "$file" > "minified/$file"
+          find . -name "*.lua" -not -path "./.git/*" | while read -r file; do
+            ./bin/illuaminate minify "$file" > "$file.tmp"
+            mv "$file.tmp" "$file"
           done
       - name: Push stuff branch
         run: |
