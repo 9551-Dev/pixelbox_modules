@@ -7,11 +7,29 @@ return {init=function(box,module,api,share,_,load_flags)
         end
     end
 
+    local function gfxrnd_renderer(self)
+        check_graphics_mode(box.term)
+        self.term.drawPixels(
+            self.x_offset + 1,
+            self.y_offset + 1,
+            self.canvas,
+            self.width,self.height
+        )
+    end
+
+    local function gfxrnd_updater()
+        local w,h = box.term.getSize(
+            box.term.getGraphicsMode and box.term.getGraphicsMode() or 1
+        )
+
+        box.term_width,box.term_height = w,h
+        box.width,     box.height      = w,h
+
+        api.restore(box,box.background,true,true)
+    end
+
     return {
-        render = function(self)
-            check_graphics_mode(self.term)
-            self.term.drawPixels(1,1,self.canvas)
-        end
+        render = gfxrnd_renderer
     },{
         verified_load=function()
             if box.term.drawPixels == nil then
@@ -23,7 +41,14 @@ return {init=function(box,module,api,share,_,load_flags)
             box.term_width,box.term_height = w,h
             box.width,     box.height      = w,h
 
-            api.restore(box,box.background,true)
+            if box.modules["PB_MODULE:rndswp"] then
+                box.__rndswp__renderer["gfx"] = {
+                    drawer = gfxrnd_renderer,
+                    update = gfxrnd_updater
+                }
+            end
+
+            gfxrnd_updater()
         end
     }
 end,

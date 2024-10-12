@@ -2,8 +2,7 @@ return {init=function(box,module,api,_,_,load_flags)
     local dep_rgbquant,dep_palutil
 
     local table_concat = table.concat
-
-    local pb_to_blit = api.internal.to_blit_lookup
+    local pb_to_blit   = api.internal.to_blit_lookup
 
     local rgbquant_colorspace
 
@@ -26,15 +25,22 @@ return {init=function(box,module,api,_,_,load_flags)
         local term = self.term
         local blit_line,set_cursor = term.blit,term.setCursorPos
 
+        local term_height = self.term_height
+
         local canv = self.canvas
 
         local fg_line_1,bg_line_1 = {},{}
         local fg_line_2,bg_line_2 = {},{}
 
-        local width,height = self.width,self.height
+        local x_offset,y_offset = self.x_offset,self.y_offset
+        local width,height      = self.width,   self.height
 
         local even_char_line = string_rep("\131",width)
         local odd_char_line  = string_rep("\143",width)
+
+        local red_upper_bound = rgbquant_colorspace.r_upper_bound
+        local grn_upper_bound = rgbquant_colorspace.g_upper_bound
+        local blu_upper_bound = rgbquant_colorspace.b_upper_bound
 
         local sy = 0
         for y=1,height,3 do
@@ -45,29 +51,32 @@ return {init=function(box,module,api,_,_,load_flags)
 
             local n = 1
             for x=1,width do
-                local color1 = layer_1[x]
-                local color2 = layer_2[x]
-                local color3 = layer_3[x]
+                local opt_color = layer_3[x] or layer_2[x]
+                local color1 = hex_to_screen(layer_1[x],red_upper_bound,grn_upper_bound,blu_upper_bound)
+                local color2 = hex_to_screen(layer_2[x],red_upper_bound,grn_upper_bound,blu_upper_bound)
+                local color3 = hex_to_screen(opt_color, red_upper_bound,grn_upper_bound,blu_upper_bound)
 
                 fg_line_1  [n] = pb_to_blit[color1]
                 bg_line_1  [n] = pb_to_blit[color2]
-                fg_line_2  [n] = pb_to_blit[color2 or color2]
+                fg_line_2  [n] = pb_to_blit[color2]
                 bg_line_2  [n] = pb_to_blit[color3 or color2]
 
                 n = n + 1
             end
 
-            set_cursor(1,sy-1)
+            set_cursor(1+x_offset,y_offset+sy-1)
             blit_line(odd_char_line,
-                table_concat(fg_line_1,""),
+            table_concat(fg_line_1,""),
                 table_concat(bg_line_1,"")
             )
 
-            set_cursor(1,sy)
-            blit_line(even_char_line,
+            if sy <= term_height then
+                set_cursor(1+x_offset,y_offset+sy)
+                blit_line(even_char_line,
                 table_concat(fg_line_2,""),
-                table_concat(bg_line_2,"")
-            )
+                    table_concat(bg_line_2,"")
+                )
+            end
         end
     end
 

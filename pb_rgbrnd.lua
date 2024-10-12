@@ -35,7 +35,8 @@ return {init=function(box,module,api,_,_,load_flags)
 
         local char_line,fg_line,bg_line = {},{},{}
 
-        local width,height = self.width,self.height
+        local x_offset,y_offset = self.x_offset,self.y_offset
+        local width,height      = self.width,   self.height
 
         local red_upper_bound = rgbquant_colorspace.r_upper_bound
         local grn_upper_bound = rgbquant_colorspace.g_upper_bound
@@ -52,16 +53,12 @@ return {init=function(box,module,api,_,_,load_flags)
             for x=1,width,2 do
                 local xp1 = x+1
                 local b1,b2,b3,b4,b5,b6 =
-                    layer_1[x],layer_1[xp1],
-                    layer_2[x],layer_2[xp1],
-                    layer_3[x],layer_3[xp1]
-
-                b1 = hex_to_screen(b1,red_upper_bound,grn_upper_bound,blu_upper_bound)
-                b2 = hex_to_screen(b2,red_upper_bound,grn_upper_bound,blu_upper_bound)
-                b3 = hex_to_screen(b3,red_upper_bound,grn_upper_bound,blu_upper_bound)
-                b4 = hex_to_screen(b4,red_upper_bound,grn_upper_bound,blu_upper_bound)
-                b5 = hex_to_screen(b5,red_upper_bound,grn_upper_bound,blu_upper_bound)
-                b6 = hex_to_screen(b6,red_upper_bound,grn_upper_bound,blu_upper_bound)
+                    hex_to_screen(layer_1[x],  red_upper_bound,grn_upper_bound,blu_upper_bound),
+                    hex_to_screen(layer_1[xp1],red_upper_bound,grn_upper_bound,blu_upper_bound),
+                    hex_to_screen(layer_2[x],  red_upper_bound,grn_upper_bound,blu_upper_bound),
+                    hex_to_screen(layer_2[xp1],red_upper_bound,grn_upper_bound,blu_upper_bound),
+                    hex_to_screen(layer_3[x],  red_upper_bound,grn_upper_bound,blu_upper_bound),
+                    hex_to_screen(layer_3[xp1],red_upper_bound,grn_upper_bound,blu_upper_bound)
 
                 local char,fg,bg = " ",1,b1
 
@@ -108,7 +105,7 @@ return {init=function(box,module,api,_,_,load_flags)
                 bg_line  [n] = pb_to_blit[bg]
             end
 
-            set_cursor(1,sy)
+            set_cursor(1+x_offset,sy+y_offset)
             blit_line(
                 table_concat(char_line,""),
                 table_concat(fg_line,  ""),
