@@ -30,6 +30,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b minified
-          git add minified
+          git add .
           git commit -m "Minify Lua files"
           git push -f origin minified
