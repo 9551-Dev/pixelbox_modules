@@ -23,9 +23,11 @@ jobs:
         run: |
           mkdir -p minified
           find . -name "*.lua" -not -path "./minified/*" -print0 | while IFS= read -r -d '' file; do
-            mkdir -p "minified/$(dirname "$file")"
-            ./bin/illuaminate minify "$file" > "minified/$file"
+            target="minified/$file"
+            mkdir -p "$(dirname "$target")"
+            ./bin/illuaminate minify "$file" > "$target"
           done
+
       - name: Push stuff branch
         run: |
           git config --global user.name "github-actions[bot]"
