@@ -1,5 +1,5 @@
 return {init=function(box,module,api,share,api_init,load_flags)
-    local base_render  = {
+    local base_render = {
         drawer = box.render,
         update = function()
             box:resize(
