@@ -157,7 +157,7 @@ return {init=function(box,_,_,_,_,load_flags)
         if autorender then box:render() end
     end
 
-    local function extern_draw_image(x,y,image)
+    local function extern_draw_image(image,x,y)
         local canvas = box.canvas
 
         x = std_math_round(x)
