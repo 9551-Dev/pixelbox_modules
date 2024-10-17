@@ -1,47 +1,8 @@
-return {init=function(box,module,api,share,api_init,load_flags)
-    local base_render = {
-        drawer = box.render,
-        update = function()
-            box:resize(
-                box.term_width,
-                box.term_height
-            )
-        end
-    }
-
-    local renderer_list = {}
-
-    local function swap_renderer(type)
-        if not renderer_list[type] then
-            api.module_error(module,"Non-existent renderer: "..tostring(type),3,load_flags.supress)
-        else
-            renderer_list[type].update()
-            box.render = renderer_list[type].drawer
-            return true
-        end
-    end
-
-    local base_aliases = {
-        __pixelbox_lite = "pixelbox",
-        __bixelbox_lite = "bixelbox"
-    }
-
-    return {
-        __rndswp__renderer=renderer_list,
-        rndswp={
-            set_renderer = swap_renderer
-        }
-    },{verified_load=function()
-        renderer_list["base"] = base_render
-
-        for k,v in pairs(base_aliases) do
-            if box[k] then renderer_list[v] = base_render end
-        end
-    end}
-end,
-    id         = "PB_MODULE:rndswp",
-    name       = "PB_RendererSwapper",
-    author     = "9551",
-    contact    = "https://devvie.cc/contact",
-    report_msg = "\n__name: module error, report issues at\n-> __contact"
-}
+return{init=function(e,t,a,o,i,n)local
+s={drawer=e.render,update=function()e:resize(e.term_width,e.term_height)end}local
+h={}local function r(d)if not h[d]then
+a.module_error(t,"Non-existent renderer: "..tostring(d),3,n.supress)else
+h[d].update()e.render=h[d].drawer return true end end local
+l={__pixelbox_lite="pixelbox",__bixelbox_lite="bixelbox"}return{__rndswp__renderer=h,rndswp={set_renderer=r}},{verified_load=function()h["base"]=s
+for u,c in pairs(l)do if e[u]then h[c]=s end end
+end}end,id="PB_MODULE:rndswp",name="PB_RendererSwapper",author="9551",contact="https://devvie.cc/contact",report_msg="\n__name: module error, report issues at\n-> __contact"}

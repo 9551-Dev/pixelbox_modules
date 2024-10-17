@@ -1,186 +1,36 @@
-return {init=function(box,module,api,_,_,load_flags)
-    local dep_rgbquant,dep_palutil
-
-    local table_concat = table.concat
-
-    local pb_texel_character_lookup  = api.internal.texel_character_lookup
-    local pb_texel_foreground_lookup = api.internal.texel_foreground_lookup
-    local pb_texel_background_lookup = api.internal.texel_background_lookup
-
-    local pb_to_blit = api.internal.to_blit_lookup
-
-    local rgbquant_colorspace
-
-    local div_255  = 1/255
-    local r_shift  = 1/(16^4)
-    local g_shift  = 1/(16^2)
-    local bit_band = 2^8
-    local function hex_to_screen(hex,bound_r,bound_g,bound_b)
-        local r = ((hex*r_shift)%bit_band)*div_255 * bound_r
-        local g = ((hex*g_shift)%bit_band)*div_255 * bound_g
-        local b = (hex%bit_band)          *div_255 * bound_b
-
-        r,g,b = r-(r%1),g-(g%1),b-(b%1)
-
-        return rgbquant_colorspace[r][g][b]
-    end
-
-    local color_lookup  = {}
-    local texel_body    = {0,0,0,0,0,0}
-    local function patched_pb_render(self)
-        local t = self.term
-        local blit_line,set_cursor = t.blit,t.setCursorPos
-
-        local canv = self.canvas
-
-        local char_line,fg_line,bg_line = {},{},{}
-
-        local x_offset,y_offset = self.x_offset,self.y_offset
-        local width,height      = self.width,   self.height
-
-        local red_upper_bound = rgbquant_colorspace.r_upper_bound
-        local grn_upper_bound = rgbquant_colorspace.g_upper_bound
-        local blu_upper_bound = rgbquant_colorspace.b_upper_bound
-
-        local sy = 0
-        for y=1,height,3 do
-            sy = sy + 1
-            local layer_1 = canv[y]
-            local layer_2 = canv[y+1]
-            local layer_3 = canv[y+2]
-
-            local n = 0
-            for x=1,width,2 do
-                local xp1 = x+1
-                local b1,b2,b3,b4,b5,b6 =
-                    hex_to_screen(layer_1[x],  red_upper_bound,grn_upper_bound,blu_upper_bound),
-                    hex_to_screen(layer_1[xp1],red_upper_bound,grn_upper_bound,blu_upper_bound),
-                    hex_to_screen(layer_2[x],  red_upper_bound,grn_upper_bound,blu_upper_bound),
-                    hex_to_screen(layer_2[xp1],red_upper_bound,grn_upper_bound,blu_upper_bound),
-                    hex_to_screen(layer_3[x],  red_upper_bound,grn_upper_bound,blu_upper_bound),
-                    hex_to_screen(layer_3[xp1],red_upper_bound,grn_upper_bound,blu_upper_bound)
-
-                local char,fg,bg = " ",1,b1
-
-                local single_color = b2 == b1
-                                and  b3 == b1
-                                and  b4 == b1
-                                and  b5 == b1
-                                and  b6 == b1
-
-                if not single_color then
-                    color_lookup[b6] = 5
-                    color_lookup[b5] = 4
-                    color_lookup[b4] = 3
-                    color_lookup[b3] = 2
-                    color_lookup[b2] = 1
-                    color_lookup[b1] = 0
-
-                    local pattern_identifier =
-                        color_lookup[b2]       +
-                        color_lookup[b3] * 3   +
-                        color_lookup[b4] * 4   +
-                        color_lookup[b5] * 20  +
-                        color_lookup[b6] * 100
-
-                    local fg_location = pb_texel_foreground_lookup[pattern_identifier]
-                    local bg_location = pb_texel_background_lookup[pattern_identifier]
-
-                    texel_body[1] = b1
-                    texel_body[2] = b2
-                    texel_body[3] = b3
-                    texel_body[4] = b4
-                    texel_body[5] = b5
-                    texel_body[6] = b6
-
-                    fg = texel_body[fg_location]
-                    bg = texel_body[bg_location]
-
-                    char = pb_texel_character_lookup[pattern_identifier]
-                end
-
-                n = n + 1
-                char_line[n] = char
-                fg_line  [n] = pb_to_blit[fg]
-                bg_line  [n] = pb_to_blit[bg]
-            end
-
-            set_cursor(1+x_offset,sy+y_offset)
-            blit_line(
-                table_concat(char_line,""),
-                table_concat(fg_line,  ""),
-                table_concat(bg_line,  "")
-            )
-        end
-    end
-
-    local function get_box_color_hex(color)
-        local terminal = box.term or term
-
-        local r,g,b = terminal.getPaletteColor(color)
-
-        r = r * 255
-        g = g * 255
-        b = b * 255
-
-        return r*(16^4) + g*(16^2) + b
-    end
-
-    local function setup_default_colorspace()
-        local terminal_palette = dep_palutil.from_term()
-
-        rgbquant_colorspace = dep_rgbquant.make_colorspace(
-            terminal_palette,
-            load_flags.rgbrnd_defaultres or 10,
-            nil,nil,
-            load_flags.rgbrnd_defaultcspace
-        )
-    end
-
-    local function set_lookup_space(rgbquant_space)
-        rgbquant_colorspace = rgbquant_space
-    end
-
-    return {
-        render = patched_pb_render,
-
-        rgbrnd = {
-            set_lookup_space = set_lookup_space,
-            internal = {
-                current_lookup_space     = rgbquant_colorspace,
-                hex_to_screen            = hex_to_screen,
-                setup_default_colorspace = setup_default_colorspace,
-                get_box_color_hex        = get_box_color_hex
-            }
-        }
-    },{verified_load=function()
-        if not box.__pixelbox_lite then
-            api.module_error(module,"Can only be used with standard pixelbox_lite",4,load_flags.supress)
-        end
-
-        if not box.modules["PB_MODULE:rgbquant"] then
-            api.module_error(module,"Missing dependency PB_MODULE:rgbquant",4,load_flags.supress)
-        end
-        if not box.modules["PB_MODULE:palutil"] and not load_flags.rgbrnd_nodefault then
-            api.module_error(module,"Missing dependency PB_MODULE:palutil",4,load_flags.supress)
-        end
-
-        local background = box.background
-        api.restore(box,get_box_color_hex(background),false)
-
-        dep_rgbquant = box.modules["PB_MODULE:rgbquant"].__fn.rgbquant
-        if box.modules["PB_MODULE:palutil"] then
-            dep_palutil = box.modules["PB_MODULE:palutil"].__fn.palutil
-        end
-
-        if dep_palutil and not load_flags.rgbrnd_nodefault then
-            setup_default_colorspace()
-        end
-    end}
-end,
-    id         = "PB_MODULE:rgbrnd",
-    name       = "PB_RGBRender",
-    author     = "9551",
-    contact    = "https://devvie.cc/contact",
-    report_msg = "\n__name: module error, report issues at\n-> __contact"
-}
+return{init=function(e,t,a,o,o,i)local n,s local h=table.concat local
+r=a.internal.texel_character_lookup local d=a.internal.texel_foreground_lookup
+local l=a.internal.texel_background_lookup local u=a.internal.to_blit_lookup
+local c local m=1/255 local f=1/(16^4)local w=1/(16^2)local y=2^8 local
+function p(v,b,g,k)local q=((v*f)%y)*m*b local j=((v*w)%y)*m*g local
+x=(v%y)*m*k q,j,x=q-(q%1),j-(j%1),x-(x%1)return c[q][j][x]end local z={}local
+E={0,0,0,0,0,0}local function T(A)local O=A.term local
+I,N=O.blit,O.setCursorPos local S=A.canvas local H,R,D={},{},{}local
+L,U=A.x_offset,A.y_offset local C,M=A.width,A.height local F=c.r_upper_bound
+local W=c.g_upper_bound local Y=c.b_upper_bound local P=0 for V=1,M,3 do P=P+1
+local B=S[V]local G=S[V+1]local K=S[V+2]local Q=0 for J=1,C,2 do local X=J+1
+local
+Z,et,tt,at,ot,it=p(B[J],F,W,Y),p(B[X],F,W,Y),p(G[J],F,W,Y),p(G[X],F,W,Y),p(K[J],F,W,Y),p(K[X],F,W,Y)local
+nt,st,ht=" ",1,Z local rt=et==Z and tt==Z and at==Z and ot==Z and it==Z if not
+rt then z[it]=5 z[ot]=4 z[at]=3 z[tt]=2 z[et]=1 z[Z]=0 local
+dt=z[et]+z[tt]*3+z[at]*4+z[ot]*20+z[it]*100 local lt=d[dt]local ut=l[dt]E[1]=Z
+E[2]=et E[3]=tt E[4]=at E[5]=ot E[6]=it st=E[lt]ht=E[ut]nt=r[dt]end Q=Q+1
+H[Q]=nt R[Q]=u[st]D[Q]=u[ht]end N(1+L,P+U)I(h(H,""),h(R,""),h(D,""))end end
+local function ct(mt)local ft=e.term or term local
+wt,yt,pt=ft.getPaletteColor(mt)wt=wt*255 yt=yt*255 pt=pt*255 return
+wt*(16^4)+yt*(16^2)+pt end local function vt()local
+bt=s.from_term()c=n.make_colorspace(bt,i.rgbrnd_defaultres or
+10,nil,nil,i.rgbrnd_defaultcspace)end local function gt(kt)c=kt end
+return{render=T,rgbrnd={set_lookup_space=gt,internal={current_lookup_space=c,hex_to_screen=p,setup_default_colorspace=vt,get_box_color_hex=ct}}},{verified_load=function()if
+not e.__pixelbox_lite then
+a.module_error(t,"Can only be used with standard pixelbox_lite",4,i.supress)end
+if not e.modules["PB_MODULE:rgbquant"]then
+a.module_error(t,"Missing dependency PB_MODULE:rgbquant",4,i.supress)end if not
+e.modules["PB_MODULE:palutil"]and not i.rgbrnd_nodefault then
+a.module_error(t,"Missing dependency PB_MODULE:palutil",4,i.supress)end local
+qt=e.background
+a.restore(e,ct(qt),false)n=e.modules["PB_MODULE:rgbquant"].__fn.rgbquant if
+e.modules["PB_MODULE:palutil"]then
+s=e.modules["PB_MODULE:palutil"].__fn.palutil end if s and not
+i.rgbrnd_nodefault then vt()end
+end}end,id="PB_MODULE:rgbrnd",name="PB_RGBRender",author="9551",contact="https://devvie.cc/contact",report_msg="\n__name: module error, report issues at\n-> __contact"}

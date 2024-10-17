@@ -1,159 +1,23 @@
-return {init=function(box,module,api,share,api_init,load_flags)
-    local function create_multilayer_list(n,tbl)
-        tbl = tbl or {}
-        if n == 0 then return tbl end
-        return setmetatable(tbl, {__index = function(t, k)
-            local new = create_multilayer_list(n-1)
-            --if k == nil then error("Table index is nil",2) end
-            t[k] = new
-            return new
-        end})
-    end
-
-    local function metatable_remap(tbl,mappings)
-        local remapped_list = setmetatable({},{__index=function(self,key)
-            local remapped_val = mappings[key]
-            if remapped_val then
-                return rawget(tbl,remapped_val)
-            else
-                return rawget(tbl,key)
-            end
-        end})
-
-        return remapped_list
-    end
-
-    local function indexer_2d_remap_yx(tbl,key,width)
-        local y_index = key/(width+1)
-        y_index = (y_index - y_index%1) + 1
-
-        local x_index = (key-1)%width+1
-
-        return tbl[y_index][x_index]
-    end
-
-    local function indexer_2d_remap_pnglua(tbl,key,width,height)
-        local y_index = key/(width+1)
-        y_index = (y_index - y_index%1) + 1
-
-        local x_index = (key-1)%width+1
-
-        return tbl[y_index].pixels[x_index]
-    end
-
-    local function metatable_value_remap(tbl,remapping_func)
-        local remapped_list = setmetatable({},{
-            __index = function(self,key)
-                local value = tbl[key]
-
-                if value then
-                    return remapping_func(value)
-                end
-            end,
-            __len = function() return #tbl end
-        })
-
-        return remapped_list
-    end
-
-    local function metatable_value_remap_memoized(tbl,remapping_func)
-        local remapped_list = setmetatable({},{
-            __index = function(self,key)
-                if rawget(self,key) ~= nil then
-                    return rawget(self,key)
-                end
-
-                local value = tbl[key]
-
-                if value then
-                    local remapped_value = remapping_func(value)
-                    rawset(self,key,remapped_value)
-                    return remapped_value
-                end
-            end,
-            __len = function() return #tbl end
-        })
-
-        return remapped_list
-    end
-
-
-    local function clone_value_remap(tbl,remapping_func)
-        local remapped_list = {}
-
-        for i=1,#tbl do
-            remapped_list[i] = remapping_func(tbl[i])
-        end
-
-        return remapped_list
-    end
-
-    local function metatable_1d_scale_remap(tbl,original_width,original_height,new_width,new_height)
-        local inverse_width = 1/new_width
-
-        local inverse_small_width  = 1/(new_width  - 1)
-        local inverse_small_height = 1/(new_height - 1)
-
-        local remapped_list = setmetatable({},{
-            __index = function(_, index)
-                local decoded_x = (index - 1) % new_width
-                local decoded_y = (index - 1) * inverse_width
-                decoded_y = decoded_y - decoded_y%1
-
-                local normalized_x = decoded_x * inverse_small_width
-                local normalized_y = decoded_y * inverse_small_height
-
-                local original_x = normalized_x * (original_width  - 1)
-                local original_y = normalized_y * (original_height - 1)
-
-                original_x = original_x - original_x%1
-                original_y = original_y - original_y%1
-
-                local mapped_index = original_y * original_width + original_x + 1
-
-                return tbl[mapped_index]
-            end,
-
-            __len = function()
-                return new_width*new_height
-            end
-        })
-
-        return remapped_list
-    end
-
-    local function metatable_remap_2d_to_1d(tbl,width,height,indexer)
-        indexer = indexer or indexer_2d_remap_yx
-
-        local size = width*height
-        local remapped_list = setmetatable({},{__index=function(self,key)
-            return indexer(tbl,key,width,height)
-        end,__len=function()
-            return size
-        end})
-
-        return remapped_list
-    end
-
-    return {arrutil = {
-        create_multilayer_list = create_multilayer_list,
-        mt_key_remap           = metatable_remap,
-        mt_val_remap           = metatable_value_remap,
-        mt_val_remap_mem       = metatable_value_remap_memoized,
-        mt_scale_remap         = metatable_1d_scale_remap,
-        mt_remap_2d_to_1d      = metatable_remap_2d_to_1d,
-
-        cl_val_remap = clone_value_remap,
-
-        map = {
-            pnglua = indexer_2d_remap_pnglua,
-            yx     = indexer_2d_remap_yx,
-        }
-    }},{}
-end,
-    id         = "PB_MODULE:arrutil",
-    name       = "PB_ArrayUtil",
-    author     = "9551",
-    contact    = "https://devvie.cc/contact",
-    report_msg = "\n__name: module error, report issues at\n-> __contact"
-}
+return{init=function(e,t,a,o,i,n)local function s(h,r)r=r or{}if h==0 then
+return r end return setmetatable(r,{__index=function(d,l)local u=s(h-1)d[l]=u
+return u end})end local function c(m,f)local
+w=setmetatable({},{__index=function(y,p)local v=f[p]if v then return
+rawget(m,v)else return rawget(m,p)end end})return w end local function
+b(g,k,q)local j=k/(q+1)j=(j-j%1)+1 local x=(k-1)%q+1 return g[j][x]end local
+function z(E,T,A,O)local I=T/(A+1)I=(I-I%1)+1 local N=(T-1)%A+1 return
+E[I].pixels[N]end local function S(H,R)local
+D=setmetatable({},{__index=function(L,U)local C=H[U]if C then return R(C)end
+end,__len=function()return#H end})return D end local function M(F,W)local
+Y=setmetatable({},{__index=function(P,V)if rawget(P,V)~=nil then return
+rawget(P,V)end local B=F[V]if B then local G=W(B)rawset(P,V,G)return G end
+end,__len=function()return#F end})return Y end local function K(Q,J)local
+X={}for Z=1,#Q do X[Z]=J(Q[Z])end return X end local function
+et(tt,at,ot,it,nt)local st=1/it local ht=1/(it-1)local rt=1/(nt-1)local
+dt=setmetatable({},{__index=function(lt,ut)local ct=(ut-1)%it local
+mt=(ut-1)*st mt=mt-mt%1 local ft=ct*ht local wt=mt*rt local yt=ft*(at-1)local
+pt=wt*(ot-1)yt=yt-yt%1 pt=pt-pt%1 local vt=pt*at+yt+1 return
+tt[vt]end,__len=function()return it*nt end})return dt end local function
+bt(gt,kt,qt,jt)jt=jt or b local xt=kt*qt local
+zt=setmetatable({},{__index=function(Et,Tt)return
+jt(gt,Tt,kt,qt)end,__len=function()return xt end})return zt end
+return{arrutil={create_multilayer_list=s,mt_key_remap=c,mt_val_remap=S,mt_val_remap_mem=M,mt_scale_remap=et,mt_remap_2d_to_1d=bt,cl_val_remap=K,map={pnglua=z,yx=b,}}},{}end,id="PB_MODULE:arrutil",name="PB_ArrayUtil",author="9551",contact="https://devvie.cc/contact",report_msg="\n__name: module error, report issues at\n-> __contact"}

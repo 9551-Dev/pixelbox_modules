@@ -1,65 +1,15 @@
-return {init=function(_,_,_,_,_,_)
-    local function rgb_to_oklab(r,g,b)
-        local l = (r*0.4122214708 + g*0.5363325363 + b*0.0514459929)^0.3333333
-        local m = (r*0.2119034982 + g*0.6806995451 + b*0.1073969566)^0.3333333
-        local s = (r*0.0883024619 + g*0.2817188376 + b*0.6299787005)^0.3333333
-
-        return  l*0.2104542553 + m*0.7936177850 - s*0.0040720468,
-                l*1.9779984951 - m*2.4285922050 + s*0.4505937099,
-                l*0.0259040371 + m*0.7827717662 - s*0.8086757660
-    end
-
-    local function rgb_to_xyz(r,g,b)
-        if r > 0.04045 then r = ((r+0.055)/1.055)^2.4
-        else r = r/12.92 end
-
-        if g > 0.04045 then g = ((g+0.055)/1.055)^2.4
-        else g = g/12.92 end
-
-        if b > 0.04045 then b = ((b+0.055)/1.055)^2.4
-        else b = b/12.92 end
-
-        return  r*0.4124 + g*0.3576 + b*0.1805,
-                r*0.2126 + g*0.7152 + b*0.0722,
-                r*0.0193 + g*0.1192 + b*0.9505
-    end
-
-    local cielab_const = 16 / 116
-    local function rgb_to_cielab(r,g,b)
-        local x,y,z = rgb_to_xyz(r,g,b)
-
-        local spc_x = x / 94.811
-        local spc_y = y / 100
-        local spc_z = z / 107.304
-
-        if spc_x > 0.008856 then spc_x = spc_x^0.3333333
-        else spc_x = 7.787*spc_x + cielab_const end
-
-        if spc_y > 0.008856 then spc_y = spc_y^0.3333333
-        else spc_y = 7.787*spc_y + cielab_const end
-
-        if spc_z > 0.008856 then spc_z = spc_z^0.3333333
-        else spc_z = 7.787*spc_z + cielab_const end
-
-        return  (16*spc_y) - 16,
-                50*(spc_x-spc_y),
-                20*(spc_y-spc_z)
-    end
-
-    local function rgb_to_rgb(r,g,b)
-        return r,g,b
-    end
-
-    return {cspace = {
-        cielab = rgb_to_cielab,
-        oklab  = rgb_to_oklab,
-        rgb    = rgb_to_rgb,
-        xyz    = rgb_to_xyz,
-    }},{}
-end,
-    id         = "PB_MODULE:cspace",
-    name       = "PB_ColorSpace",
-    author     = "9551",
-    contact    = "https://devvie.cc/contact",
-    report_msg = "\n__name: module error, report issues at\n-> __contact"
-}
+return{init=function(e,e,e,e,e,e)local function t(a,o,i)local
+n=(a*0.4122214708+o*0.5363325363+i*0.0514459929)^0.3333333 local
+s=(a*0.2119034982+o*0.6806995451+i*0.1073969566)^0.3333333 local
+h=(a*0.0883024619+o*0.2817188376+i*0.6299787005)^0.3333333 return
+n*0.2104542553+s*0.7936177850-h*0.0040720468,n*1.9779984951-s*2.4285922050+h*0.4505937099,n*0.0259040371+s*0.7827717662-h*0.8086757660
+end local function r(d,l,u)if d>0.04045 then d=((d+0.055)/1.055)^2.4 else
+d=d/12.92 end if l>0.04045 then l=((l+0.055)/1.055)^2.4 else l=l/12.92 end if
+u>0.04045 then u=((u+0.055)/1.055)^2.4 else u=u/12.92 end return
+d*0.4124+l*0.3576+u*0.1805,d*0.2126+l*0.7152+u*0.0722,d*0.0193+l*0.1192+u*0.9505
+end local c=16/116 local function m(f,w,y)local p,v,b=r(f,w,y)local g=p/94.811
+local k=v/100 local q=b/107.304 if g>0.008856 then g=g^0.3333333 else
+g=7.787*g+c end if k>0.008856 then k=k^0.3333333 else k=7.787*k+c end if
+q>0.008856 then q=q^0.3333333 else q=7.787*q+c end
+return(16*k)-16,50*(g-k),20*(k-q)end local function j(x,z,E)return x,z,E end
+return{cspace={cielab=m,oklab=t,rgb=j,xyz=r,}},{}end,id="PB_MODULE:cspace",name="PB_ColorSpace",author="9551",contact="https://devvie.cc/contact",report_msg="\n__name: module error, report issues at\n-> __contact"}
