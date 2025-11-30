@@ -47,7 +47,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
                 local value = tbl[key]
 
                 if value then
-                    return remapping_func(value)
+                    return remapping_func(value,key,self)
                 end
             end,
             __len = function() return #tbl end
@@ -66,7 +66,7 @@ return {init=function(box,module,api,share,api_init,load_flags)
                 local value = tbl[key]
 
                 if value then
-                    local remapped_value = remapping_func(value)
+                    local remapped_value = remapping_func(value,key,self)
                     rawset(self,key,remapped_value)
                     return remapped_value
                 end
