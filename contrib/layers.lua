@@ -1,394 +1,106 @@
-if not table.pack then table.pack = function(...) return { n = select("#", ...), ... } end end
-if not table.unpack then table.unpack = unpack end
-local load = load if _VERSION:find("5.1") then load = function(x, n, _, env) local f, e = loadstring(x, n) if not f then return f, e end if env then setfenv(f, env) end return f end end
-local _select, _unpack, _pack, _error = select, table.unpack, table.pack, error
-local _libs = {}
-local _3d_1, _2f3d_1, _3c_1, _3c3d_1, _3e_1, _3e3d_1, _2b_1, _2d_1, mod1, _2e2e_1, len_23_1, getIdx1, setIdx_21_1, error1, getmetatable1, next1, setmetatable1, tostring1, type_23_1, format1, concat1, unpack1, n1, list1, constVal1, splice1, apply1, type1, map1, put_21_1, neq_3f_1, eq_3f_1, pretty1, demandFailure_2d3e_string1, min1, slicingView1, map2, nth1, nths1, push_21_1, range1, _2e3e3f_1, findIndexRev1, layers1, indexY1, makeMt1, init1
-_3d_1 = function(v1, v2) return v1 == v2 end
-_2f3d_1 = function(v1, v2) return v1 ~= v2 end
-_3c_1 = function(v1, v2) return v1 < v2 end
-_3c3d_1 = function(v1, v2) return v1 <= v2 end
-_3e_1 = function(v1, v2) return v1 > v2 end
-_3e3d_1 = function(v1, v2) return v1 >= v2 end
-_2b_1 = function(x, ...) local t = x + ... for i = 2, _select('#', ...) do t = t + _select(i, ...) end return t end
-_2d_1 = function(x, ...) local t = x - ... for i = 2, _select('#', ...) do t = t - _select(i, ...) end return t end
-mod1 = function(x, ...) local t = x % ... for i = 2, _select('#', ...) do t = t % _select(i, ...) end return t end
-_2e2e_1 = function(x, ...) local n = _select('#', ...) local t = _select(n, ...) for i = n - 1, 1, -1 do t = _select(i, ...) .. t end return x .. t end
-len_23_1 = function(v1) return #v1 end
-getIdx1 = function(v1, v2) return v1[v2] end
-setIdx_21_1 = function(v1, v2, v3) v1[v2] = v3 end
-error1 = error
-getmetatable1 = getmetatable
-next1 = next
-setmetatable1 = setmetatable
-tostring1 = tostring
-type_23_1 = type
-format1 = string.format
-concat1 = table.concat
-unpack1 = table.unpack
-n1 = function(x)
-  if type_23_1(x) == "table" then
-    return x["n"]
-  else
-    return #x
-  end
-end
-list1 = function(...)
-  local xs = _pack(...) xs.tag = "list"
-  return xs
-end
-constVal1 = function(val)
-  if type_23_1(val) == "table" then
-    local tag = val["tag"]
-    if tag == "number" then
-      return val["value"]
-    elseif tag == "string" then
-      return val["value"]
-    else
-      return val
-    end
-  else
-    return val
-  end
-end
-splice1 = function(xs)
-  local parent = xs["parent"]
-  if parent then
-    return unpack1(parent, xs["offset"] + 1, xs["n"] + xs["offset"])
-  else
-    return unpack1(xs, 1, xs["n"])
-  end
-end
-apply1 = function(f, ...)
-  local _n = _select("#", ...) - 1
-  local xss, xs
-  if _n > 0 then
-    xss = {tag="list", n=_n, _unpack(_pack(...), 1, _n)}
-    xs = select(_n + 1, ...)
-  else
-    xss = {tag="list", n=0}
-    xs = ...
-  end
-  return f(splice1((function()
-    local _offset, _result, _temp = 0, {tag="list"}
-    _temp = xss
-    for _c = 1, _temp.n do _result[0 + _c + _offset] = _temp[_c] end
-    _offset = _offset + _temp.n
-    _temp = xs
-    for _c = 1, _temp.n do _result[0 + _c + _offset] = _temp[_c] end
-    _offset = _offset + _temp.n
-    _result.n = _offset + 0
-    return _result
-  end)()
-  ))
-end
-type1 = function(val)
-  local ty = type_23_1(val)
-  if ty == "table" then
-    return val["tag"] or "table"
-  else
-    return ty
-  end
-end
-map1 = function(f, x)
-  local out = {tag="list", n=0}
-  local forLimit = n1(x)
-  local i = 1
-  while i <= forLimit do
-    out[i] = f(x[i])
-    i = i + 1
-  end
-  out["n"] = n1(x)
-  return out
-end
-put_21_1 = function(t, typs, l)
-  local len = n1(typs)
-  local forLimit = len - 1
-  local i = 1
-  while i <= forLimit do
-    local x = typs[i]
-    local y = t[x]
-    if not y then
-      y = {}
-      t[x] = y
-    end
-    t = y
-    i = i + 1
-  end
-  t[typs[len]] = l
-  return nil
-end
-neq_3f_1 = function(x, y)
-  return not eq_3f_1(x, y)
-end
-local this = {lookup={}, tag="multimethod"}
-eq_3f_1 = setmetatable1(this, {__call=function(this1, x, y)
-  if x == y then
-    return true
-  else
-    local method = (this["lookup"][type1(x)] or {})[type1(y)] or this["default"]
-    if not method then
-      error1("No matching method to call for (" .. concat1(list1("eq?", type1(x), type1(y)), " ") .. ")")
-    end
-    return method(x, y)
-  end
-end, name="eq?", args=list1("x", "y")})
-put_21_1(eq_3f_1, list1("lookup", "list", "list"), function(x, y)
-  if n1(x) ~= n1(y) then
-    return false
-  else
-    local equal = true
-    local forLimit = n1(x)
-    local i = 1
-    while i <= forLimit do
-      if neq_3f_1(x[i], y[i]) then
-        equal = false
-      end
-      i = i + 1
-    end
-    return equal
-  end
-end)
-put_21_1(eq_3f_1, list1("lookup", "table", "table"), function(x, y)
-  local equal = true
-  local temp, v = next1(x)
-  while temp ~= nil do
-    if neq_3f_1(v, y[temp]) then
-      equal = false
-    end
-    temp, v = next1(x, temp)
-  end
-  return equal
-end)
-put_21_1(eq_3f_1, list1("lookup", "symbol", "symbol"), function(x, y)
-  return x["contents"] == y["contents"]
-end)
-put_21_1(eq_3f_1, list1("lookup", "string", "symbol"), function(x, y)
-  return x == y["contents"]
-end)
-put_21_1(eq_3f_1, list1("lookup", "symbol", "string"), function(x, y)
-  return x["contents"] == y
-end)
-put_21_1(eq_3f_1, list1("lookup", "key", "string"), function(x, y)
-  return x["value"] == y
-end)
-put_21_1(eq_3f_1, list1("lookup", "string", "key"), function(x, y)
-  return x == y["value"]
-end)
-put_21_1(eq_3f_1, list1("lookup", "key", "key"), function(x, y)
-  return x["value"] == y["value"]
-end)
-put_21_1(eq_3f_1, list1("lookup", "number", "number"), function(x, y)
-  return constVal1(x) == constVal1(y)
-end)
-put_21_1(eq_3f_1, list1("lookup", "string", "string"), function(x, y)
-  return constVal1(x) == constVal1(y)
-end)
-eq_3f_1["default"] = function(x, y)
-  return false
-end
-local this = {lookup={}, tag="multimethod"}
-pretty1 = setmetatable1(this, {__call=function(this1, x)
-  local method = this["lookup"][type1(x)] or this["default"]
-  if not method then
-    error1("No matching method to call for (" .. concat1(list1("pretty", type1(x)), " ") .. ")")
-  end
-  return method(x)
-end, name="pretty", args=list1("x")})
-put_21_1(pretty1, list1("lookup", "list"), function(xs)
-  return "(" .. concat1(map1(pretty1, xs), " ") .. ")"
-end)
-put_21_1(pretty1, list1("lookup", "symbol"), function(x)
-  return x["contents"]
-end)
-put_21_1(pretty1, list1("lookup", "key"), function(x)
-  return ":" .. x["value"]
-end)
-put_21_1(pretty1, list1("lookup", "number"), function(x)
-  return format1("%g", constVal1(x))
-end)
-put_21_1(pretty1, list1("lookup", "string"), function(x)
-  return format1("%q", constVal1(x))
-end)
-put_21_1(pretty1, list1("lookup", "table"), function(x)
-  local out = {tag="list", n=0}
-  local temp, v = next1(x)
-  while temp ~= nil do
-    local _offset, _result, _temp = 0, {tag="list"}
-    _result[1 + _offset] = pretty1(temp) .. " " .. pretty1(v)
-    _temp = out
-    for _c = 1, _temp.n do _result[1 + _c + _offset] = _temp[_c] end
-    _offset = _offset + _temp.n
-    _result.n = _offset + 1
-    out = _result
-    temp, v = next1(x, temp)
-  end
-  return "{" .. (concat1(out, " ") .. "}")
-end)
-put_21_1(pretty1, list1("lookup", "multimethod"), function(x)
-  return "«method: (" .. getmetatable1(x)["name"] .. " " .. concat1(getmetatable1(x)["args"], " ") .. ")»"
-end)
-pretty1["default"] = function(x)
-  if type_23_1(x) == "table" then
-    return pretty1["lookup"]["table"](x)
-  else
-    return tostring1(x)
-  end
-end
-demandFailure_2d3e_string1 = function(failure)
-  if failure["message"] then
-    return format1("demand not met: %s (%s).\n%s", failure["condition"], failure["message"], failure["traceback"])
-  else
-    return format1("demand not met: %s.\n%s", failure["condition"], failure["traceback"])
-  end
-end
-put_21_1(pretty1, list1("lookup", "demand-failure"), function(failure)
-  return demandFailure_2d3e_string1(failure)
-end)
-min1 = math.min
-local refMt = {__index=function(t, k)
-  return t["parent"][k + t["offset"]]
-end, __newindex=function(t, k, v)
-  t["parent"][k + t["offset"]] = v
-  return nil
-end}
-slicingView1 = function(list, offset)
-  if n1(list) <= offset then
-    return {tag="list", n=0}
-  elseif list["parent"] and list["offset"] then
-    return setmetatable1({parent=list["parent"], offset=list["offset"] + offset, n=n1(list) - offset, tag=type1(list)}, refMt)
-  else
-    return setmetatable1({parent=list, offset=offset, n=n1(list) - offset, tag=type1(list)}, refMt)
-  end
-end
-map2 = function(fn, ...)
-  local xss = _pack(...) xss.tag = "list"
-  local ns
-  local out = {tag="list", n=0}
-  local forLimit = n1(xss)
-  local i = 1
-  while i <= forLimit do
-    if not (type1((nth1(xss, i))) == "list") then
-      error1("that's no list! " .. pretty1(nth1(xss, i)) .. " (it's a " .. type1(nth1(xss, i)) .. "!)")
-    end
-    push_21_1(out, n1(nth1(xss, i)))
-    i = i + 1
-  end
-  ns = out
-  local out = {tag="list", n=0}
-  local forLimit = apply1(min1, ns)
-  local i = 1
-  while i <= forLimit do
-    push_21_1(out, apply1(fn, nths1(xss, i)))
-    i = i + 1
-  end
-  return out
-end
-nth1 = function(xs, idx)
-  if idx >= 0 then
-    return xs[idx]
-  else
-    return xs[xs["n"] + 1 + idx]
-  end
-end
-nths1 = function(xss, idx)
-  local out = {tag="list", n=0}
-  local forLimit = n1(xss)
-  local i = 1
-  while i <= forLimit do
-    push_21_1(out, nth1(nth1(xss, i), idx))
-    i = i + 1
-  end
-  return out
-end
-push_21_1 = function(xs, ...)
-  local vals = _pack(...) vals.tag = "list"
-  local nxs = n1(xs)
-  xs["n"] = (nxs + n1(vals))
-  local forLimit = n1(vals)
-  local i = 1
-  while i <= forLimit do
-    xs[nxs + i] = vals[i]
-    i = i + 1
-  end
-  return xs
-end
-range1 = function(...)
-  local args = _pack(...) args.tag = "list"
-  local x
-  local out = {}
-  if n1(args) % 2 == 1 then
-    error1("Expected an even number of arguments to range", 2)
-  end
-  local forLimit = n1(args)
-  local i = 1
-  while i <= forLimit do
-    out[args[i]] = args[i + 1]
-    i = i + 2
-  end
-  x = out
-  local st, ed = x["from"] or 1, 1 + x["to"] or error1("Expected end index, got nothing")
-  local inc = (x["by"] or 1 + st) - st
-  local tst
-  if st >= ed then
-    tst = _3e_1
-  else
-    tst = _3c_1
-  end
-  local c, out = st, {tag="list", n=0}
-  while tst(c, ed) do
-    push_21_1(out, c)
-    c = c + inc
-  end
-  return out
-end
-_2e3e3f_1 = function(x, ...)
-  local keys = _pack(...) keys.tag = "list"
-  local keys1, out = keys, x
-  while not (nil == out or nil == keys1[1]) do
-    keys1, out = slicingView1(keys1, 1), out[keys1[1]]
-  end
-  return out
-end
-findIndexRev1 = function(p, xs)
-  local len = n1(xs)
-  local i = len
-  while true do
-    if i == 0 then
-      return nil
-    elseif p(nth1(xs, i)) then
-      return i
-    else
-      i = i - 1
-    end
-  end
-end
-layers1 = setmetatable1({tag="list", n=0}, {__newindex=function(self, idx, v)
-  self["n"] = #self
-  return nil
-end})
-indexY1 = function(y)
-  local index = function(_5f_, x)
-    return layers1[(findIndexRev1(function(t)
-      return _2e3e3f_1(t, y, x) ~= nil
-    end, layers1))][y][x]
-  end
-  return setmetatable1({}, {__index=index})
-end
-makeMt1 = function(y)
-  return {__index=indexY1(y), __newindex=function(_5f_, x, val)
-    layers1[1][y][x] = val
-    return nil
-  end}
-end
-init1 = function(box, module, api, share, initialized_3f_, loadFlags)
-  local height, width = box["height"], box["width"]
-  local lines = range1("from", 1, "to", height)
-  local canvas = map2(function(y)
-    return setmetatable1({}, makeMt1(y))
-  end, lines)
-  push_21_1(layers1, box["canvas"])
-  box["canvas"] = canvas
-  return {layers=layers1}
-end
-return {init=init1, id="layers", name="Multilayer support", author="viwty", contact="viwty@discord or viwty@cock.li", report_msg="\n__name: complain over at __contact"}
+if not table.pack then table.pack=function(...)return{n=select("#",...),...}end
+end if not table.unpack then table.unpack=unpack end local e=load if
+_VERSION:find("5.1")then e=function(t,a,o,i)local n,s=loadstring(t,a)if not n
+then return n,s end if i then setfenv(n,i)end return n end end local
+h,r,d,l=select,table.unpack,table.pack,error local u={}local
+c,m,f,w,y,p,v,b,g,k,q,j,x,z,E,T,A,O,I,N,S,H,R,D,L,U,C,M,F,W,Y,P,V,B,G,K,Q,J,X,Z,et,tt,at,ot,it,nt,st
+c=function(ht,rt)return ht==rt end m=function(dt,lt)return dt~=lt end
+f=function(ut,ct)return ut<ct end w=function(mt,ft)return mt<=ft end
+y=function(wt,yt)return wt>yt end p=function(pt,vt)return pt>=vt end
+v=function(bt,...)local gt=bt+...for kt=2,h('#',...)do gt=gt+h(kt,...)end
+return gt end b=function(qt,...)local jt=qt-...for xt=2,h('#',...)do
+jt=jt-h(xt,...)end return jt end g=function(zt,...)local Et=zt%...for
+Tt=2,h('#',...)do Et=Et%h(Tt,...)end return Et end k=function(At,...)local
+Ot=h('#',...)local It=h(Ot,...)for Nt=Ot-1,1,-1 do It=h(Nt,...)..It end return
+At..It end q=function(St)return#St end j=function(Ht,Rt)return Ht[Rt]end
+x=function(Dt,Lt,Ut)Dt[Lt]=Ut end z=error E=getmetatable T=next A=setmetatable
+O=tostring I=type N=string.format S=table.concat H=table.unpack
+R=function(Ct)if I(Ct)=="table"then return Ct["n"]else return#Ct end end
+D=function(...)local Mt=d(...)Mt.tag="list"return Mt end L=function(Ft)if
+I(Ft)=="table"then local Wt=Ft["tag"]if Wt=="number"then return
+Ft["value"]elseif Wt=="string"then return Ft["value"]else return Ft end else
+return Ft end end U=function(Yt)local Pt=Yt["parent"]if Pt then return
+H(Pt,Yt["offset"]+1,Yt["n"]+Yt["offset"])else return H(Yt,1,Yt["n"])end end
+C=function(Vt,...)local Bt=h("#",...)-1 local Gt,Kt if Bt>0 then
+Gt={tag="list",n=Bt,r(d(...),1,Bt)}Kt=select(Bt+1,...)else
+Gt={tag="list",n=0}Kt=...end return Vt(U((function()local
+Qt,Jt,Xt=0,{tag="list"}Xt=Gt for Zt=1,Xt.n do Jt[0+Zt+Qt]=Xt[Zt]end Qt=Qt+Xt.n
+Xt=Kt for ea=1,Xt.n do Jt[0+ea+Qt]=Xt[ea]end Qt=Qt+Xt.n Jt.n=Qt+0 return Jt
+end)()))end M=function(ta)local aa=I(ta)if aa=="table"then return
+ta["tag"]or"table"else return aa end end F=function(oa,ia)local
+na={tag="list",n=0}local sa=R(ia)local ha=1 while ha<=sa do
+na[ha]=oa(ia[ha])ha=ha+1 end na["n"]=R(ia)return na end
+W=function(ra,da,la)local ua=R(da)local ca=ua-1 local ma=1 while ma<=ca do
+local fa=da[ma]local wa=ra[fa]if not wa then wa={}ra[fa]=wa end ra=wa ma=ma+1
+end ra[da[ua]]=la return nil end Y=function(ya,pa)return not P(ya,pa)end local
+va={lookup={},tag="multimethod"}P=A(va,{__call=function(ba,ga,ka)if ga==ka then
+return true else local qa=(va["lookup"][M(ga)]or{})[M(ka)]or va["default"]if
+not qa then
+z("No matching method to call for ("..S(D("eq?",M(ga),M(ka))," ")..")")end
+return qa(ga,ka)end
+end,name="eq?",args=D("x","y")})W(P,D("lookup","list","list"),function(ja,xa)if
+R(ja)~=R(xa)then return false else local za=true local Ea=R(ja)local Ta=1 while
+Ta<=Ea do if Y(ja[Ta],xa[Ta])then za=false end Ta=Ta+1 end return za end
+end)W(P,D("lookup","table","table"),function(Aa,Oa)local Ia=true local
+Na,Sa=T(Aa)while Na~=nil do if Y(Sa,Oa[Na])then Ia=false end Na,Sa=T(Aa,Na)end
+return Ia end)W(P,D("lookup","symbol","symbol"),function(Ha,Ra)return
+Ha["contents"]==Ra["contents"]end)W(P,D("lookup","string","symbol"),function(Da,La)return
+Da==La["contents"]end)W(P,D("lookup","symbol","string"),function(Ua,Ca)return
+Ua["contents"]==Ca end)W(P,D("lookup","key","string"),function(Ma,Fa)return
+Ma["value"]==Fa end)W(P,D("lookup","string","key"),function(Wa,Ya)return
+Wa==Ya["value"]end)W(P,D("lookup","key","key"),function(Pa,Va)return
+Pa["value"]==Va["value"]end)W(P,D("lookup","number","number"),function(Ba,Ga)return
+L(Ba)==L(Ga)end)W(P,D("lookup","string","string"),function(Ka,Qa)return
+L(Ka)==L(Qa)end)P["default"]=function(Ja,Xa)return false end local
+va={lookup={},tag="multimethod"}V=A(va,{__call=function(Za,eo)local
+to=va["lookup"][M(eo)]or va["default"]if not to then
+z("No matching method to call for ("..S(D("pretty",M(eo))," ")..")")end return
+to(eo)end,name="pretty",args=D("x")})W(V,D("lookup","list"),function(ao)return"("..S(F(V,ao)," ")..")"end)W(V,D("lookup","symbol"),function(oo)return
+oo["contents"]end)W(V,D("lookup","key"),function(io)return":"..io["value"]end)W(V,D("lookup","number"),function(no)return
+N("%g",L(no))end)W(V,D("lookup","string"),function(so)return
+N("%q",L(so))end)W(V,D("lookup","table"),function(ho)local
+ro={tag="list",n=0}local lo,uo=T(ho)while lo~=nil do local
+co,mo,fo=0,{tag="list"}mo[1+co]=V(lo).." "..V(uo)fo=ro for wo=1,fo.n do
+mo[1+wo+co]=fo[wo]end co=co+fo.n mo.n=co+1 ro=mo lo,uo=T(ho,lo)end
+return"{"..(S(ro," ").."}")end)W(V,D("lookup","multimethod"),function(yo)return"«method: ("..E(yo)["name"].." "..S(E(yo)["args"]," ")..")»"end)V["default"]=function(po)if
+I(po)=="table"then return V["lookup"]["table"](po)else return O(po)end end
+B=function(vo)if vo["message"]then return
+N("demand not met: %s (%s).\n%s",vo["condition"],vo["message"],vo["traceback"])else
+return N("demand not met: %s.\n%s",vo["condition"],vo["traceback"])end end
+W(V,D("lookup","demand-failure"),function(bo)return B(bo)end)G=math.min local
+go={__index=function(ko,qo)return
+ko["parent"][qo+ko["offset"]]end,__newindex=function(jo,xo,zo)jo["parent"][xo+jo["offset"]]=zo
+return nil end}K=function(Eo,To)if R(Eo)<=To then return{tag="list",n=0}elseif
+Eo["parent"]and Eo["offset"]then return
+A({parent=Eo["parent"],offset=Eo["offset"]+To,n=R(Eo)-To,tag=M(Eo)},go)else
+return A({parent=Eo,offset=To,n=R(Eo)-To,tag=M(Eo)},go)end end
+Q=function(Ao,...)local Oo=d(...)Oo.tag="list"local Io local
+No={tag="list",n=0}local So=R(Oo)local Ho=1 while Ho<=So do if
+not(M((J(Oo,Ho)))=="list")then
+z("that's no list! "..V(J(Oo,Ho)).." (it's a "..M(J(Oo,Ho)).."!)")end
+Z(No,R(J(Oo,Ho)))Ho=Ho+1 end Io=No local No={tag="list",n=0}local
+So=C(G,Io)local Ho=1 while Ho<=So do Z(No,C(Ao,X(Oo,Ho)))Ho=Ho+1 end return No
+end J=function(Ro,Do)if Do>=0 then return Ro[Do]else return Ro[Ro["n"]+1+Do]end
+end X=function(Lo,Uo)local Co={tag="list",n=0}local Mo=R(Lo)local Fo=1 while
+Fo<=Mo do Z(Co,J(J(Lo,Fo),Uo))Fo=Fo+1 end return Co end Z=function(Wo,...)local
+Yo=d(...)Yo.tag="list"local Po=R(Wo)Wo["n"]=(Po+R(Yo))local Vo=R(Yo)local Bo=1
+while Bo<=Vo do Wo[Po+Bo]=Yo[Bo]Bo=Bo+1 end return Wo end et=function(...)local
+Go=d(...)Go.tag="list"local Ko local Qo={}if R(Go)%2==1 then
+z("Expected an even number of arguments to range",2)end local Jo=R(Go)local
+Xo=1 while Xo<=Jo do Qo[Go[Xo]]=Go[Xo+1]Xo=Xo+2 end Ko=Qo local
+Zo,ei=Ko["from"]or 1,1+Ko["to"]or z("Expected end index, got nothing")local
+ti=(Ko["by"]or 1+Zo)-Zo local ai if Zo>=ei then ai=y else ai=f end local
+oi,Qo=Zo,{tag="list",n=0}while ai(oi,ei)do Z(Qo,oi)oi=oi+ti end return Qo end
+tt=function(ii,...)local ni=d(...)ni.tag="list"local si,hi=ni,ii while
+not(nil==hi or nil==si[1])do si,hi=K(si,1),hi[si[1]]end return hi end
+at=function(ri,di)local li=R(di)local ui=li while true do if ui==0 then return
+nil elseif ri(J(di,ui))then return ui else ui=ui-1 end end end
+ot=A({tag="list",n=0},{__newindex=function(ci,mi,fi)ci["n"]=#ci return nil
+end})it=function(wi)local yi=function(pi,vi)return ot[(at(function(bi)return
+tt(bi,wi,vi)~=nil end,ot))][wi][vi]end return A({},{__index=yi})end
+nt=function(gi)return{__index=it(gi),__newindex=function(ki,qi,ji)ot[1][gi][qi]=ji
+return nil end}end st=function(xi,zi,Ei,Ti,Ai,Oi)local
+Ii,Ni=xi["height"],xi["width"]local Si=et("from",1,"to",Ii)local
+Hi=Q(function(Ri)return A({},nt(Ri))end,Si)Z(ot,xi["canvas"])xi["canvas"]=Hi
+return{layers=ot}end
+return{init=st,id="layers",name="Multilayer support",author="viwty",contact="viwty@discord or viwty@cock.li",report_msg="\n__name: complain over at __contact"}
